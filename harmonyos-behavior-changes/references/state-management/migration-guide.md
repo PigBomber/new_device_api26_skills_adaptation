@@ -1,0 +1,417 @@
+# 状态管理 V1 → V2 迁移要点
+
+> 升级鸿蒙项目时，状态管理从 V1 迁移到 V2 的核心参考。
+> 详细机制差异见 [v1-v2-difference.md](v1-v2-difference.md)，
+> 完整概述见 [overview.md](overview.md)。
+
+## 为什么要迁：V1 的限制
+
+V1 用"代理观察"机制，存在 4 个硬伤：
+1. **状态变量不能独立于 UI** — 同一数据被多个视图代理时，一个视图改了不通知其他视图
+2. **只能观察第一层** — 嵌套对象的深层属性变化感知不到
+3. **冗余更新** — 改对象某个属性会触发整个对象相关 UI 刷新
+4. **装饰器配合限制多** — 组件没有明确的输入/输出，不利于组件化
+
+V2 让"数据本身可观察"，解决了以上全部问题。
+
+## 装饰器对照表（V1 → V2）
+
+| 用途 | V1 | V2 | 迁移注意 |
+|------|----|----|---------|
+| 组件装饰器 | `@Component` | `@ComponentV2` | 一个组件内 V1/V2 装饰器**不能混用**（父子组件可分别用 V1/V2） |
+| 组件内状态（纯内部） | `@State` | `@Local` | @Local 不可外部初始化，是组件私有状态 |
+| 组件内状态（外部传入一次） | `@State` | `@Param` + `@Once` | 需要从外部初始化一次的情况 |
+| 父→子单向 | `@Prop` | `@Param` | 注意：@Prop 深拷贝，@Param 是引用传递（复杂类型行为不同） |
+| 父↔子双向 | `@Link` | `@Param` + `@Event` | V2 拆成数据(@Param)和回调(@Event)，父子组件都要改 |
+| 跨层级提供 | `@Provide` | `@Provider` | 改名 |
+| 跨层级消费 | `@Consume` | `@Consumer` | 改名 |
+| 可观察类 | `@Observed` | `@ObservedV2` | @ObservedV2 本身无观测能力，需配 @Trace |
+| 类属性追踪 | `@Track` | `@Trace` | V1 @Track 只能一层；V2 @Trace 支持深度观测 |
+| 嵌套对象 | `@ObjectLink` | 直接用 `@Param` | V2 不需要 @ObjectLink，@ObservedV2+@Trace 即可深度观测 |
+| 变化监听 | `@Watch` | `@Monitor` | **同步→异步**：@Watch 同步执行多次，@Monitor 异步执行一次（⚠️ 最易踩坑） |
+| 计算属性 | 无 | `@Computed` | V2 新增 |
+| 应用级状态 | `AppStorage` + `@StorageLink/@StorageProp` | `AppStorageV2` + `connect()` | 写法完全不同，需定义 @ObservedV2 类，详见第 3 步 |
+| 持久化 | `PersistentStorage` | `PersistenceV2` + `connect()` | 解耦 AppStorage，可独立使用 |
+| 页面级状态 | `LocalStorage` + `@LocalStorageLink/@LocalStorageProp` | 全局 `@ObservedV2` + `@Trace` 类 | V2 不再需要 LocalStorage 容器 |
+| 双向绑定语法糖 | `$$` | `!!` | V2 建议用 !! |
+| 自定义弹窗 | `@CustomDialog` | `openCustomDialog` | V2 建议用 openCustomDialog |
+| 组件复用 | `@Reusable` | `@ReusableV2` | |
+| 系统环境变量 | `Environment` | 直接调用 Ability 接口 | V2 解耦 AppStorage |
+
+## 机制差异（迁移时最易踩坑的点）
+
+### 1. 观测深度
+- **V1**：只观察第一层。`this.objA.propA` 改了能感知，但 `this.objA.objB.propB` 改了**感知不到**
+- **V2**：只要被 `@Trace` 装饰，嵌套多深都能感知
+
+### 2. @Watch（V1 同步） vs @Monitor（V2 异步）⚠️ 最易出 bug
+```typescript
+// V1: @Watch 同步执行，变量改 N 次回调执行 N 次
+@State @Watch('onChange') count: number = 0;
+onChange() { /* count 每次改都立即执行 */ }
+
+// V2: @Monitor 异步执行，变量改 N 次回调只执行 1 次（在当前事件结束后）
+@Local count: number = 0;
+@Monitor('count') onChange(mon: IMonitor) { /* 事件结束后执行一次 */ }
+```
+**迁移影响**：如果 V1 代码依赖"@Watch 同步执行多次"的逻辑（比如在回调里立即读最新值做判断），迁到 V2 后时序变了，必须调整。
+
+### 3. 组件内不能混用 V1/V2 装饰器
+一个 `@Component` 内只能用 V1 装饰器（@State/@Prop/@Link...），一个 `@ComponentV2` 内只能用 V2 装饰器（@Local/@Param/@Event...）。**父子组件可以分别用 V1 和 V2**。
+
+### 4. @Local 不可外部初始化（编译报错 10905324）⚠️ 高频踩坑
+
+V1 的 `@State` 既可以内部初始化，也可以从父组件传入初始化。但 V2 的 `@Local` **只允许内部初始化，禁止外部传入**。如果父组件调用时传了该属性，编译报错：
+
+```
+ERROR 10905324: The '@Local' property 'xxx' in the custom component cannot be initialized here (forbidden to specify).
+```
+
+**判断规则**（决定用 @Local 还是 @Param）：
+- 该属性**只在本组件内部读写**，父组件不传 → `@Local`
+- 该属性**需要父组件传入初始值** → `@Param`
+- 该属性需要父组件传入，且**只同步一次**（后续子组件自己维护）→ `@Param @Once`
+- 该属性需要**父子双向同步** → `@Param` + `@Event`
+
+**错误示例：**
+```typescript
+// ❌ currentIndex 从父组件传入，却用了 @Local
+@ComponentV2
+struct Child {
+  @Local currentIndex: number = 0;  // 报错：父组件传值时 forbidden to specify
+}
+build() { Child({ currentIndex: this.idx }) }  // 父组件传值触发报错
+
+// ✅ 需要外部传入用 @Param；只同步一次加 @Once
+@ComponentV2
+struct Child {
+  @Param @Once currentIndex: number = 0;
+}
+```
+
+**迁移要点**：V1 的 `@State` 迁 V2 时，**先检查这个属性是否被父组件传值初始化**。如果被传值，用 `@Param`（或 `@Param @Once`），不能用 `@Local`。只有纯内部状态才用 `@Local`。
+
+### 5. V2 组件不能包含 V1 的 @Link 系统组件（编译报错 10905213）⚠️ 系统组件阻塞迁移
+
+部分官方/系统组件内部使用了 V1 的 `@Link`（双向绑定）。在 `@ComponentV2` 组件里使用这些 V1 系统组件会编译报错：
+
+```
+ERROR 10905213: A V2 component cannot be used with any member property decorated by '@Link' in a V1 component.
+```
+
+**已知的 V1 系统组件**（内部含 @Link，会阻塞 V2 迁移）：
+- `SegmentButton`（segmented control）→ V2 替代：`TabSegmentButtonV2` / `CapsuleSegmentButtonV2`（来自 `@ohos.arkui.advanced.SegmentButtonV2`）
+- 其他含 `selectedIndexes` 双向绑定参数的组件
+
+**处理策略**：
+1. **优先查 V2 替代组件**。如 SegmentButton → SegmentButtonV2 系列
+2. **若无 V2 替代或替代 API 不明**，将该组件所在的 struct **保留 V1**（@Component）。父子组件 V1/V2 可混用，不影响外层 V2 化
+3. 不要强行把含 V1 系统组件的 struct 改成 @ComponentV2——会编译失败
+
+**示例**：组件 A（V2）内嵌组件 B，B 内部用了 SegmentButton(V1)。则 A 可迁 V2，但 **B 保留 V1**。
+```typescript
+@ComponentV2
+struct A { build() { B({...}) } }  // ✅ V2 调用 V1 子组件，允许
+
+@Component
+struct B {  // ✅ 保留 V1，因为内部用了 SegmentButton(V1)
+  build() { SegmentButton({ selectedIndexes: this.idx }) }
+}
+```
+
+## 迁移步骤
+
+### 第 1 步：识别需要迁移的范围
+
+```bash
+# 组件级 V1 装饰器
+grep -rn "@Component\b\|@State\|@Prop\|@Link\|@Provide\|@Consume\|@Watch\|@Observed\|@ObjectLink" --include="*.ets" <工程路径> | grep -v "@ComponentV2"
+
+# 应用级 V1 状态（@StorageLink/@StorageProp/AppStorage/LocalStorage/PersistentStorage）
+grep -rn "@StorageLink\|@StorageProp\|AppStorage\|LocalStorage\|PersistentStorage" --include="*.ets" <工程路径>
+```
+
+### 第 2 步：确定迁移顺序
+
+**原则：叶子组件优先，根组件在后；应用级状态（AppStorage）最先迁或最后迁都行，但要一次迁完。**
+
+```
+应用级状态（AppStorage → AppStorageV2）   ← 建议先迁，因为很多组件依赖它
+    ↓
+叶子组件（不引用其他自定义组件的组件）      ← 先迁
+    ↓
+中间组件                                       ← 再迁
+    ↓
+根组件 / 页面入口（@Entry）                   ← 最后迁
+```
+
+> 关键规则：**同一个组件内 V1/V2 装饰器不能混用**。但父子组件可以分别用 V1 和 V2——所以可以从叶子组件开始逐个迁，不需要一次性全改。
+
+### 第 3 步：应用级状态迁移（@StorageLink / AppStorage）
+
+这是最常被忽略但改动量最大的一块。
+
+**V1 写法：**
+```typescript
+// 写入端（通常在 EntryAbility 或工具类）
+AppStorage.setOrCreate('isHover', false);
+AppStorage.setOrCreate('pageID', 0);
+
+// 读取端（各组件）
+@Component
+struct MyView {
+  @StorageLink('isHover') isHover: boolean = false;   // 双向同步
+  @StorageProp('pageID') pageID: number = 0;          // 只读单向
+}
+```
+
+**V2 写法：**
+```typescript
+// 1. 先定义可观察的数据类
+@ObservedV2
+class AppState {
+  @Trace isHover: boolean = false;
+  @Trace pageID: number = 0;
+}
+
+// 2. 写入端：用 AppStorageV2.connect
+AppStorageV2.connect(AppState, 'appState', () => new AppState())!;
+
+// 3. 读取端：组件内用 @Local + connect
+@ComponentV2
+struct MyView {
+  @Local appState: AppState = AppStorageV2.connect(AppState, 'appState', () => new AppState())!;
+  // 双向同步：直接改 this.appState.isHover 即可
+  // 只读：不调用 connect，通过其他方式获取
+}
+```
+
+**LocalStorage（页面级）→ V2：** 用全局 `@ObservedV2` + `@Trace` 类替代，不再需要 LocalStorage 容器。
+
+**PersistentStorage（持久化）→ PersistenceV2：**
+```typescript
+// V1
+PersistentStorage.persistProp('theme', 'light');
+@StorageLink('theme') theme: string = 'light';
+
+// V2
+@ObservedV2
+class ThemeState { @Trace theme: string = 'light'; }
+PersistenceV2.connect(ThemeState, 'themeState', () => new ThemeState())!;
+```
+
+**迁移决策：无公共模块的跨模块缓存**
+
+工程没有 lib_common 公共模块时，跨模块共享的全局缓存（如 screenWidth/screenHeight）迁移到 V2 需要：
+- 要么在每个使用模块各自建 model（重复定义）
+- 要么新建一个公共模块（影响工程结构）
+- 要么放 entry 模块（其他模块不一定依赖 entry）
+
+**实战决策**：如果工程无公共模块，且共享的只是简单值缓存（不涉及深度观测、不驱动 UI），**保留 V1 AppStorage** 是合理的——强行迁移的结构成本高于收益。这种情况 V1/V2 混用不影响功能。
+
+**纯 V1 工程的正确迁移策略（一步到位，不留 V1 中间态）**：
+
+纯 V1 工程（0 个 @ComponentV2）迁移时，**不要用双写桥或任何保留 V1 的中间态**。正确做法是按顺序一步到位全迁：
+
+1. **先定义 @ObservedV2 数据类**（如 AppGlobalState），集中管理所有全局状态字段
+2. **写入端和读取端一起改**：AppStorage.setOrCreate → AppStorageV2.connect；@StorageLink/@StorageProp → @Local + connect
+3. **组件同步迁 V2**：@Component → @ComponentV2，@State → @Local/@Param
+4. **全部迁完后 V1 AppStorage 彻底清除**，不留任何 V1 残留
+
+> ⚠️ **禁止用双写桥**（同时写 V1 AppStorage 和 V2 AppStorageV2）。这是分批迁移的妥协方案，但既然目标是全部迁完 V2，双写桥只会增加复杂度——迁完后还要记得删 V1 那行，容易遗漏。一步到位更干净。
+
+### 第 4 步：组件级装饰器迁移（逐条配代码对比）
+
+#### 4.1 组件装饰器
+```typescript
+// V1
+@Component
+struct MyView { }
+
+// V2
+@ComponentV2
+struct MyView { }
+```
+
+#### 4.2 @State → @Local 或 @Param @Once
+```typescript
+// V1：@State 可外部初始化，也可内部
+@Component
+struct MyView {
+  @State count: number = 0;
+}
+
+// V2：看是否需要外部传入
+// 情况A：纯内部状态 → @Local（不可外部初始化）
+@ComponentV2
+struct MyView {
+  @Local count: number = 0;
+}
+// 情况B：需要外部传入一次 → @Param @Once
+@ComponentV2
+struct MyView {
+  @Param @Once count: number = 0;
+}
+```
+
+#### 4.3 @Prop → @Param（父→子单向）
+```typescript
+// V1：@Prop 深拷贝
+@Component
+struct Child {
+  @Prop title: string = '';
+}
+
+// V2：@Param 引用传递（注意：复杂类型不再深拷贝）
+@ComponentV2
+struct Child {
+  @Param title: string = '';
+}
+```
+
+#### 4.4 @Link → @Param + @Event（父↔子双向）⚠️ 跨文件改动
+双向绑定在 V2 拆成"数据下行(@Param) + 事件上行(@Event)"两部分，父子组件都要改。
+
+```typescript
+// V1：@Link 自动双向同步
+// 子组件
+@Component
+struct Child {
+  @Link count: number;   // 改这里会同步回父组件
+}
+// 父组件
+@State parentCount: number = 0;
+Child({ count: this.parentCount })
+
+// V2：@Param + @Event 手动实现双向
+// 子组件
+@ComponentV2
+struct Child {
+  @Param count: number = 0;
+  @Event onCountChange: (n: number) => void = (n: number) => {};  // 上行事件
+  build() {
+    Button('inc').onClick(() => this.onCountChange(this.count + 1))
+  }
+}
+// 父组件
+@Local parentCount: number = 0;
+Child({
+  count: this.parentCount,
+  onCountChange: (n: number) => { this.parentCount = n; }  // 接收上行
+})
+```
+
+#### 4.5 @Observed + @ObjectLink → @ObservedV2 + @Trace
+```typescript
+// V1：@Observed 配 @ObjectLink，只能观测一层
+@Observed
+class User {
+  name: string = '';
+}
+@Component
+struct Child {
+  @ObjectLink user: User = new User();
+}
+
+// V2：@ObservedV2 + @Trace，支持深度观测，不需要 @ObjectLink
+@ObservedV2
+class User {
+  @Trace name: string = '';   // 需追踪的属性加 @Trace
+}
+@ComponentV2
+struct Child {
+  @Param user: User = new User();   // 直接 @Param，不再需要 @ObjectLink
+}
+```
+
+#### 4.6 @Watch → @Monitor ⚠️ 时序变化
+```typescript
+// V1：@Watch 同步执行，变量改 N 次回调执行 N 次
+@Component
+struct MyView {
+  @State @Watch('onChange') count: number = 0;
+  onChange() {
+    // count 每次改变都立即同步执行
+    console.info(`count = ${this.count}`);
+  }
+}
+
+// V2：@Monitor 异步执行，变量改 N 次回调只执行 1 次（取最终值）
+@ComponentV2
+struct MyView {
+  @Local count: number = 0;
+  @Monitor('count')
+  onChange(mon: IMonitor) {
+    // 当前事件结束后才异步执行一次
+    console.info(`count = ${this.count}`);
+    // mon.before 可以拿到变化前的值
+    mon.dirty.forEach(path => console.info(`changed: ${path}`));
+  }
+}
+```
+**必须检查**：如果 V1 的 @Watch 回调里依赖"立即同步读到最新值"或"每次改变都触发"，迁到 V2 后行为变了，需调整逻辑。
+
+#### 4.7 @Provide / @Consume → @Provider / @Consumer
+```typescript
+// V1
+@Component
+struct Parent {
+  @Provide('theme') theme: string = 'light';
+}
+@Component
+struct Descendant {
+  @Consume('theme') theme: string = '';   // 跨层级双向同步
+}
+
+// V2（仅装饰器改名，用法基本一致）
+@ComponentV2
+struct Parent {
+  @Provider('theme') theme: string = 'light';
+}
+@ComponentV2
+struct Descendant {
+  @Consumer('theme') theme: string = '';
+}
+```
+
+### 第 5 步：编译验证 + 重点复查
+
+```bash
+hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&1 | grep -E "ERROR|error"
+```
+
+**重点复查清单：**
+- [ ] 所有 `@Watch` 改 `@Monitor` 的地方，确认时序变化不影响业务逻辑
+- [ ] `@Link` 改 `@Param + @Event` 的地方，确认父子组件双向同步正确
+- [ ] `@StorageLink` 改 `AppStorageV2.connect` 的地方，确认写入端和读取端都用 V2
+- [ ] `@Prop` 改 `@Param` 的地方，注意复杂类型从深拷贝变引用传递
+- [ ] `@Observed` 类加了 `@Trace` 的属性是否完整（漏加会导致不触发 UI 更新）
+- [ ] **每个 `@State` 改 `@Local` 前，先检查该属性是否被父组件传值**——被传值的必须用 `@Param`（否则报错 10905324）
+- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton）——有则查 V2 替代，或该 struct 保留 V1（否则报错 10905213）
+
+> V1/V2 同一组件内混用会编译报错，按错误提示逐个修正即可。父子组件分别用 V1/V2 是允许的。
+
+## 迁移决策
+
+| 场景 | 建议 |
+|------|------|
+| 新开发的应用 | 直接用 V2 |
+| 老应用升级到 API 26 | **必须迁移**。V1→V2 是升级流程的必要环节，不留 V1 残留 |
+| 老应用暂不升级 | 不涉及迁移（未升级就不需要迁 V2） |
+
+> V1 存在深度观测缺失、冗余更新、装饰器配合限制等问题。**升级时必须迁移 V2**——这是升级流程的必要环节，不留 V1 残留，不保留双写桥等中间态。
+
+## 参考文档
+
+- [v1-v2-difference.md](v1-v2-difference.md) — V1/V2 机制差异（观测深度、@Watch/@Monitor、更新流程）
+- [overview.md](overview.md) — 状态管理概述（V1/V2 装饰器总览）
+- [mvvm-v1.md](mvvm-v1.md) — MVVM V1 模式
+- [mvvm-v2.md](mvvm-v2.md) — MVVM V2 模式
+- [faq.md](faq.md) — 常见问题
+- [glossary.md](glossary.md) — 术语表
+
+## 缺失文档（需手动补充）
+
+以下关键迁移场景文档未下载，如需详细 step-by-step 迁移示例请查华为官方：
+- [V1向V2迁移场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-state-management-v1-v2-migration-guide)
+- [V1和V2混用场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/v1v2-mixing)
