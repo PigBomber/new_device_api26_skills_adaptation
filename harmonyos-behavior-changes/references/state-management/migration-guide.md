@@ -100,22 +100,32 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
 ```
 
 **已知的 V1 系统组件**（内部含 @Link，会阻塞 V2 迁移）：
-- `SegmentButton`（segmented control）→ V2 替代：`TabSegmentButtonV2` / `CapsuleSegmentButtonV2`（来自 `@ohos.arkui.advanced.SegmentButtonV2`）
-- 其他含 `selectedIndexes` 双向绑定参数的组件
+- `SegmentButton`（segmented control）→ **必须**换成 V2 替代：`TabSegmentButtonV2` / `CapsuleSegmentButtonV2`（来自 `@ohos.arkui.advanced.SegmentButtonV2`）
+- 其他含 `selectedIndexes` 双向绑定参数的组件 → 查 SDK 是否有 V2 版本
 
 **处理策略**：
-1. **优先查 V2 替代组件**。如 SegmentButton → SegmentButtonV2 系列
-2. **若无 V2 替代或替代 API 不明**，将该组件所在的 struct **保留 V1**（@Component）。父子组件 V1/V2 可混用，不影响外层 V2 化
-3. 不要强行把含 V1 系统组件的 struct 改成 @ComponentV2——会编译失败
+1. **必须查 V2 替代组件并替换**。如 SegmentButton → SegmentButtonV2 系列
+2. 查 SDK 的 `@kit.ArkUI` 导出，找带 V2 后缀的等价组件
+3. **不允许保留 V1**——即使替代组件 API 不同，也要改成 V2 版本（参考华为官方文档 SegmentButtonV2 用法）
 
-**示例**：组件 A（V2）内嵌组件 B，B 内部用了 SegmentButton(V1)。则 A 可迁 V2，但 **B 保留 V1**。
+**示例**：组件 A（V2）内嵌组件 B，B 内部用了 SegmentButton(V1)。
 ```typescript
+// ❌ 错误：B 保留 V1，违反全迁原则
 @ComponentV2
-struct A { build() { B({...}) } }  // ✅ V2 调用 V1 子组件，允许
-
+struct A { build() { B({...}) } }
 @Component
-struct B {  // ✅ 保留 V1，因为内部用了 SegmentButton(V1)
-  build() { SegmentButton({ selectedIndexes: this.idx }) }
+struct B { build() { SegmentButton({ selectedIndexes: this.idx }) } }
+
+// ✅ 正确：B 也迁 V2，内部换成 SegmentButtonV2
+@ComponentV2
+struct A { build() { B({...}) } }
+@ComponentV2
+struct B {
+  build() {
+    TabSegmentButtonV2({
+      // 按 SegmentButtonV2 API 写，selectedIndexes 改用回调方式
+    })
+  }
 }
 ```
 
@@ -207,7 +217,7 @@ PersistenceV2.connect(ThemeState, 'themeState', () => new ThemeState())!;
 - 要么新建一个公共模块（影响工程结构）
 - 要么放 entry 模块（其他模块不一定依赖 entry）
 
-**实战决策**：如果工程无公共模块，且共享的只是简单值缓存（不涉及深度观测、不驱动 UI），**保留 V1 AppStorage** 是合理的——强行迁移的结构成本高于收益。这种情况 V1/V2 混用不影响功能。
+**实战决策**：工程无公共模块时，新建一个公共 model 模块或放在 utils 里存放 @ObservedV2 数据类。**必须迁移，不能保留 V1 AppStorage**。
 
 **纯 V1 工程的正确迁移策略（一步到位，不留 V1 中间态）**：
 
@@ -387,7 +397,7 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 - [ ] `@Prop` 改 `@Param` 的地方，注意复杂类型从深拷贝变引用传递
 - [ ] `@Observed` 类加了 `@Trace` 的属性是否完整（漏加会导致不触发 UI 更新）
 - [ ] **每个 `@State` 改 `@Local` 前，先检查该属性是否被父组件传值**——被传值的必须用 `@Param`（否则报错 10905324）
-- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton）——有则查 V2 替代，或该 struct 保留 V1（否则报错 10905213）
+- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton）——**必须**查 V2 替代组件（SegmentButtonV2）并替换，不允许保留 V1（否则报错 10905213）
 
 > V1/V2 同一组件内混用会编译报错，按错误提示逐个修正即可。父子组件分别用 V1/V2 是允许的。
 
