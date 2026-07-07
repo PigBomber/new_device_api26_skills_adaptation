@@ -9,16 +9,49 @@ version: 2.0.0
 
 # HarmonyOS 项目升级
 
-## ⚠️ 触发后第一件事：创建 todo 清单
+## ⚠️ 触发后第一件事：配置编译环境 + 创建 todo 清单
 
-**收到升级请求后，必须先用 TodoWrite 工具创建以下 todo 清单**（按实际工程情况填入数量），然后逐步执行。**不允许跳过任何环节**。
+**收到升级请求后，先配置好 hvigorw 编译环境，再用 TodoWrite 创建 todo 清单**（按实际工程情况填入数量），然后逐步执行。**不允许跳过任何环节**。
+
+### 第 0 步：配置 hvigorw 编译环境（必须完成，编译是③⑥的前提）
+
+**编译是升级流程的硬依赖**——废弃 API 检测靠编译告警、最终验证靠编译结果。**只要装了 DevEco Studio，本地就一定有 hvigorw**，配好环境变量即可。
+
+```bash
+# 1. 先查 PATH 里是否已有
+command -v hvigorw 2>/dev/null && echo "hvigorw 已在 PATH" || {
+  # 2. 不在 PATH，定位 DevEco Studio 安装路径（多平台）
+  # macOS:
+  DEVECO_HOME=$(find /Applications ~/Applications -maxdepth 2 -name "DevEco*Studio*" -type d 2>/dev/null | head -1)
+  # Windows (Git Bash/WSL): 在 /c/Program\ Files/ 下找
+  [ -z "$DEVECO_HOME" ] && DEVECO_HOME=$(ls -d /c/Program\ Files/Huawei/DevEco-Studio 2>/dev/null | head -1)
+  # Linux:
+  [ -z "$DEVECO_HOME" ] && DEVECO_HOME=$(find /opt ~/ -maxdepth 2 -name "DevEco*Studio*" -type d 2>/dev/null | head -1)
+
+  if [ -n "$DEVECO_HOME" ]; then
+    # macOS 的可执行文件在 Contents/tools/ 下
+    TOOLS_DIR="$DEVECO_HOME/Contents/tools"
+    SDK_DIR="$DEVECO_HOME/Contents/sdk"
+    [ ! -d "$TOOLS_DIR" ] && TOOLS_DIR="$DEVECO_HOME/tools"      # Win/Linux
+    [ ! -d "$SDK_DIR" ]  && SDK_DIR="$DEVECO_HOME/sdk"
+    export DEVECO_SDK_HOME="$SDK_DIR"
+    export PATH="$TOOLS_DIR/hvigor/bin:$TOOLS_DIR/ohpm/bin:$PATH"
+    echo "已配置 hvigorw（来自 $DEVECO_HOME）"
+  fi
+}
+
+# 3. 验证 hvigorw 真的能用
+hvigorw --version || echo "❌ hvigorw 仍不可用，请用户提供 DevEco Studio 安装路径（执行 echo $DEVECO_HOME 或在 DevEco 里看 Settings > SDK）"
+```
+
+**如果上述都失败**（极少见）：向用户索取 DevEco Studio 安装路径后重新配置。**不允许放弃编译**——编译告警是废弃 API 检测和最终验证的唯一可靠依据。
 
 ### 内置 todo 清单模板（复制到 TodoWrite）
 
 ```
 ①检测：读 build-profile.json5 定基线版本、判升级路径
 ②配置升级：改 compatibleSdkVersion/targetSdkVersion → "26.0.0"
-③废弃API迁移：clean 编译捕获 deprecated 告警 → 全部迁移（目标 0）
+③废弃API迁移：clean 编译捕获 deprecated 告警 → 按对照表全部迁移（目标 0）
 ④状态管理 V1→V2：
    4a. 应用级状态：@StorageLink/@StorageProp/AppStorage → AppStorageV2
    4b. 数据类：@Observed/@ObjectLink → @ObservedV2/@Trace
@@ -29,6 +62,8 @@ version: 2.0.0
 ⑥编译验证：0 ERROR + 0 deprecated + 运行时无崩溃
 ⑦经验沉淀：新踩的坑写回 skill
 ```
+
+> **铁律**：编译必须执行。③废弃API迁移依赖编译告警发现全部废弃点（含 grep 查不到的 Resource 重载、别名、表外项），⑥验证依赖编译结果确认 0 ERROR。**绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——装了 DevEco 就有 hvigorw，配好环境即可（用户已踩过此坑）。
 
 ### 如何使用这个清单
 

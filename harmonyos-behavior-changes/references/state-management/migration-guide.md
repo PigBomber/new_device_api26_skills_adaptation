@@ -99,34 +99,127 @@ struct Child {
 ERROR 10905213: A V2 component cannot be used with any member property decorated by '@Link' in a V1 component.
 ```
 
-**已知的 V1 系统组件**（内部含 @Link，会阻塞 V2 迁移）：
-- `SegmentButton`（segmented control）→ **必须**换成 V2 替代：`TabSegmentButtonV2` / `CapsuleSegmentButtonV2`（来自 `@ohos.arkui.advanced.SegmentButtonV2`）
-- 其他含 `selectedIndexes` 双向绑定参数的组件 → 查 SDK 是否有 V2 版本
+**已知的 V1 高级组件**（内部含 @Link / @State / @Prop 等 V1 装饰器，**在 V2 工程中会导致数据流断裂或编译报错**）。注意 kit 来源不同：
+
+**`@kit.ArkUI`（`@ohos.arkui.advanced.*`）**：
+
+| V1 组件 | V2 替代 | since | 说明 |
+|---------|---------|-------|------|
+| `SegmentButton` | `TabSegmentButtonV2` / `CapsuleSegmentButtonV2` / `MultiCapsuleSegmentButtonV2` | 18 | 单选/多选见下方示例 |
+| `ProgressButton` | `ProgressButtonV2` | 18 | 进度按钮，含 `progress` 状态 |
+| `SubHeader` | `SubHeaderV2` | 18 | 分组标题栏，含 `select` 双向状态 |
+| `ToolBar` | `ToolBarV2` | 18 | 底部工具栏，含选中态 `ItemState` |
+| `AlertDialog`/`TipsDialog` 等 | `AlertDialogV2`/`TipsDialogV2`/`ConfirmDialogV2`/`LoadingDialogV2`/`SelectDialogV2`/`CustomContentDialogV2`/`PopoverDialogV2` | 18 | 来自 `@ohos.arkui.advanced.DialogV2` |
+
+**`@kit.SpeechKit`（AI 朗读组件，注意不是 ArkUI kit）**：
+
+| V1 组件 | V2 替代 | since | 说明 |
+|---------|---------|-------|------|
+| `TextReaderIcon` | `TextReaderIconV2` | 24 | 朗读听筒图标，华为官方明确：V1 工程用 TextReaderIcon，V2 工程必须用 TextReaderIconV2 |
+
+**铁律**：升级到 API 26 的工程，遇到上述 V1 高级组件**必须替换成对应 V2 版本**。V1 高级组件在 V2 数据流中会出现：
+- 状态不同步（V1 的 `@State`/`@Link` 不被 V2 的 `@Local`/`@Param` 观测）—— 华为官方原文："使用 V1 装饰器时用 TextReaderIcon，使用 V2 装饰器时**需要**用 TextReaderIconV2"
+- 编译报错 10905213（V2 组件嵌套 V1 @Link 组件）
+- 选中态/进度等交互态丢失
 
 **处理策略**：
-1. **必须查 V2 替代组件并替换**。如 SegmentButton → SegmentButtonV2 系列
-2. 查 SDK 的 `@kit.ArkUI` 导出，找带 V2 后缀的等价组件
-3. **不允许保留 V1**——即使替代组件 API 不同，也要改成 V2 版本（参考华为官方文档 SegmentButtonV2 用法）
+1. 全局搜 V1 用法（注意两个 kit 都要查）：
+   - `import.*advanced\.(SegmentButton|ProgressButton|SubHeader|ToolBar|Dialog)['"]`（ArkUI）
+   - `import.*TextReaderIcon['"]` 和 `import.*\{.*TextReaderIcon['"]`（SpeechKit，注意不要误伤 `TextReaderIconV2`）
+2. 换成带 `V2` 后缀的对应组件：
+   - ArkUI 高级组件 → 仍从 `@kit.ArkUI` 导入
+   - TextReaderIcon → 从 `@kit.SpeechKit` 导入 `TextReaderIconV2` + `UpReadState`
+3. **不允许保留 V1**——即使替代组件 API 不同，也要改成 V2 版本
 
-**示例**：组件 A（V2）内嵌组件 B，B 内部用了 SegmentButton(V1)。
+> **TextReaderIcon → TextReaderIconV2 关键差异**（来自华为官方文档）：
+> - 导入：`import { TextReaderIconV2, UpReadState } from '@kit.SpeechKit'`
+> - V2 用 `@Param readState` + `@Event upReadState`（回调函数，类型 `UpReadState = (readState: ReadStateCode) => void`），替代 V1 的内部状态绑定
+> - 配合 `TextReader.init()` / `TextReader.start()` 使用（这两个是 kit 的全局 API，V1/V2 通用，不用改）
+
+> **未确认有 V2 版本的 ArkUI 高级组件**：如 `ComposeTitleBar`、`EditableTitleBar`、`SelectTitleBar`、`TabTitleBar`、`Filter`、`GridObjectSortComponent`、`TreeView`、`Counter`、`SwipeRefresher`、`SelectionMenu`、`Popup`、`ComposeListItem`、`Chip`/`ChipGroup`、`ArcButton`、`FormMenu`、`DownloadFileButton` 等——在当前 SDK（API 26）的 `@ohos.arkui.advanced.*` 下**没有对应 V2 文件**。这类组件所在 struct 若需 V2 化，目前只能在 struct 级别评估能否隔离，或等待官方 V2 版本。遇到时在迁移记录里标注「无 V2 替代」。
+
+### SegmentButton → SegmentButtonV2 迁移（API 经 SDK d.ets 核实）
+
+V1 `SegmentButton` 是 `@Component`，内部用 `@Link` 双向绑定 `selectedIndexes`，是 V2 化最常见的阻塞点。V2 系列**从 API 18 起提供**，三种样式：
+
+| V1 用法 | V2 替代 | 选择模式 | 关键 Param |
+|---------|---------|---------|-----------|
+| `SegmentButton`（tab 或 capsule 单选） | `TabSegmentButtonV2` / `CapsuleSegmentButtonV2` | 单选 | `selectedIndex: number` |
+| `SegmentButton`（capsule 多选） | `MultiCapsuleSegmentButtonV2` | 多选 | `selectedIndexes: number[]` |
+
+**V1→V2 关键差异（必读，否则编译/运行出错）**：
+1. **数据模型变了**：V1 用 `SegmentButtonOptions`/`SegmentButtonItemOptionsArray`；V2 用 `SegmentButtonV2Items`（一个继承自 `Array<SegmentButtonV2Item>` 的 `@ObservedV2` 类），每项是 `SegmentButtonV2Item`（构造参数为 `SegmentButtonV2ItemOptions`，字段：`text` / `icon` / `symbol` / `enabled`）
+2. **双向绑定改成单向 + 回调**：V1 的 `selectedIndexes: this.idx`（@Link）→ V2 改成 **`@Param selectedIndex` 传入 + `@Event $selectedIndex` 回调接收变更**。回调名是字段名加 `$` 前缀（不是 `onSelectedChange`）
+3. **`@Require @Param`**：`items` 和 `selectedIndex`/`selectedIndexes` 都是 `@Require @Param`，**必须传**，否则编译报错
+4. **导入路径**：V2 全部通过 `@kit.ArkUI` 导入（与 V1 同一个 kit，不用改 import 来源）
+
+**完整迁移示例**（tab 样式单选）：
 ```typescript
-// ❌ 错误：B 保留 V1，违反全迁原则
-@ComponentV2
-struct A { build() { B({...}) } }
-@Component
-struct B { build() { SegmentButton({ selectedIndexes: this.idx }) } }
+// 导入：与 V1 同一个 kit
+import { TabSegmentButtonV2, SegmentButtonV2Items, SegmentButtonV2Item } from '@kit.ArkUI';
 
-// ✅ 正确：B 也迁 V2，内部换成 SegmentButtonV2
-@ComponentV2
-struct A { build() { B({...}) } }
-@ComponentV2
-struct B {
+// ============ 迁移前：V1 ============
+@Component
+struct SegDemoV1 {
+  @State selectedIndex: number = 0;
+  private options: SegmentButtonOptions = SegmentButtonOptions.tab({
+    buttons: [{ text: '首页' }, { text: '发现' }, { text: '我的' }],
+    multiply: false
+  });
+
   build() {
-    TabSegmentButtonV2({
-      // 按 SegmentButtonV2 API 写，selectedIndexes 改用回调方式
-    })
+    // ❌ SegmentButton 是 V1，内部 @Link selectedIndexes，阻塞外层 V2 化
+    SegmentButton(this.options)
+      .selectedIndexes([this.selectedIndex])  // 双向绑定，V1 风格
+      .onSelectedChange((indexes) => { this.selectedIndex = indexes[0]; });
   }
 }
+
+// ============ 迁移后：V2 ============
+@ComponentV2
+struct SegDemoV2 {
+  @Local selectedIndex: number = 0;  // 内部状态用 @Local
+  // SegmentButtonV2Items 必须用构造函数实例化（它是 @ObservedV2 类，不是字面量）
+  @Local items: SegmentButtonV2Items = new SegmentButtonV2Items([
+    { text: '首页' }, { text: '发现' }, { text: '我的' }
+  ]);
+
+  build() {
+    // ✅ 单向 + 回调：selectedIndex 传入，$selectedIndex 接收变更
+    TabSegmentButtonV2({
+      items: this.items,
+      selectedIndex: this.selectedIndex,
+      $selectedIndex: (idx: number) => { this.selectedIndex = idx; }
+    });
+  }
+}
+```
+
+**capsule 多选**（multi-select）改用 `MultiCapsuleSegmentButtonV2`：
+```typescript
+@ComponentV2
+struct SegMultiV2 {
+  @Local selectedIndexes: number[] = [0];
+  @Local items: SegmentButtonV2Items = new SegmentButtonV2Items([
+    { text: '红' }, { text: '绿' }, { text: '蓝' }
+  ]);
+
+  build() {
+    // 多选用 selectedIndexes（数组）+ $selectedIndexes 回调
+    MultiCapsuleSegmentButtonV2({
+      items: this.items,
+      selectedIndexes: this.selectedIndexes,
+      $selectedIndexes: (idxs: number[]) => { this.selectedIndexes = idxs; }
+    });
+  }
+}
+```
+
+**易错点**：
+- ❌ 直接传字面量数组 `items: [{ text: 'x' }]` —— 类型是 `SegmentButtonV2Items`，必须 `new SegmentButtonV2Items([...])`
+- ❌ 用 `onSelectedChange` 接收回调 —— V2 没有这个属性，回调名是 `$selectedIndex` / `$selectedIndexes`
+- ❌ 忘记传 `selectedIndex` —— 它是 `@Require @Param`，缺失直接编译报错
+- ✅ 想加 icon：`new SegmentButtonV2Item({ text: '首页', icon: $r('app.media.home') })`
 ```
 
 ## 迁移步骤

@@ -1,0 +1,24 @@
+# 实战测试工程（非 skill 内容）
+ComprehensiveMall1.0.4/
+ComprehensiveNews1.0.2/
+ComprehensiveTool1.0.8/
+Recipes1.0.5/
+hmosworld-master-HMOSWorld/
+FoldedHover-master/
+TelevisionNews/
+
+# 原始文档（体积大，非 skill）
+doc/
+
+# 本地 skill 开发副本（实际 skill 在仓库根目录）
+.agents/
+
+# hvigor 构建缓存
+.hvigor/
+
+# 个人参考笔记
+link.md
+
+# 系统文件
+.DS_Store
+*.log

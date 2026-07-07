@@ -20,6 +20,8 @@ version: 1.0.0
 
 升级到 API 26 的项目，`hvigorw clean` 后全量编译的 deprecated 告警数必须降到 **0**（或只剩第三方库 oh_modules 的告警）。
 
+> **编译是废弃 API 检测的唯一可靠依据**。编译器有完整类型信息 + SDK 的 @deprecated 注解，能精确发现所有废弃点（含 Resource 重载废弃、import 别名、对照表外的新废弃 API——这些 grep 都查不到）。**装了 DevEco Studio 就一定有 hvigorw**——配好环境变量（见 `harmonyos-upgrade-verify` 的环境配置章节）即可编译。**绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——这会导致废弃 API 大量漏改（用户已踩过此坑）。
+
 ## 这个 Skill 做什么
 
 升级鸿蒙项目时，找出代码中使用的已被废弃（deprecated / removed）的 API，并找到替代方案。
@@ -36,34 +38,26 @@ version: 1.0.0
 
 ## 检测方法
 
-### 方法 1：编译器告警（最直接）
+废弃 API 检测只有一条可靠路径：**编译器告警**。不要用 grep 扫代码找废弃 API——它会误报（把已迁移的 `.px2vp(` 也匹配上）、漏报（Resource 重载、import 别名、对照表外的项全查不到），还会诱导 agent 跳过编译。
+
+### 方法：编译器告警（唯一权威依据，必须执行）
 
 ```bash
 cd <工程根目录>
-hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&1 | grep -i "deprecated"
+# clean 后全量编译才能看到完整告警（增量用缓存会跳过）
+hvigorw clean --no-daemon
+hvigorw assembleHap --mode module -p module=<模块名>@default -p product=default --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
+# 统计（减去第三方库）
+TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
+OH=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
+echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 ```
 
-DevEco Studio 编译时会为标记了 `@deprecated` 的 API 生成告警。将所有告警对应的 API 逐个替换。
+DevEco Studio 编译时会为标记了 `@deprecated` 的 API 生成告警，这是废弃 API 检测的**唯一权威依据**。编译器有完整类型信息和 SDK 注解，能精确发现所有废弃点（含 Resource 重载、import 别名、对照表外的新废弃）。将所有告警对应的 API 逐个替换。
 
-### 方法 2：全局搜索 deprecated 标记
-
-```bash
-# 搜索代码中使用的已知废弃 API 模式
-grep -rn "@deprecated" --include="*.ets" --include="*.ts" <工程路径>
-
-# 搜索常见废弃 API 名称（按需补充）
-grep -rn "from '@ohos\." --include="*.ets" --include="*.ts" <工程路径>
-```
-
-### 方法 3：按版本查 Huawei 废弃变更日志
-
-华为每个版本发布时会公布废弃 API 清单（`changelogs-*.md` 中的"废弃说明"章节）。升级路径上每个版本都要查。
-
-**数据来源**（需从 Huawei 官方获取）：
-- 各版本的 API 废弃变更日志
-- DevEco Studio SDK 源码中的 `@deprecated` JSDoc 标注
-
-> **注意**：本 skill 当前未内置全量废弃 API 数据库。上述方法 1 和方法 2 可覆盖绝大多数场景。如需精确的按版本废弃清单，请从 [HarmonyOS API 变更日志](https://developer.huawei.com/consumer/cn/doc/harmonyos-releases/revisions) 获取对应版本数据。
+> 模块名从 `build-profile.json5` 的 `modules[].name` 读取，不一定是 `entry`。
+> **hvigorw 配置**：见 `harmonyos-upgrade-verify` 的「编译环境配置」章节。装了 DevEco Studio 就有 hvigorw，配好环境变量即可。
+> 如需查某版本的完整废弃清单（编译告警之外的补充参考），看 [HarmonyOS API 变更日志](https://developer.huawei.com/consumer/cn/doc/harmonyos-releases/revisions) 对应版本的"废弃说明"章节。
 
 ## API 26 核心废弃 API 对照表（since 18 起大规模废弃）
 

@@ -15,42 +15,74 @@ version: 1.0.0
 2. 按错误码指引修复
 3. 多设备/UX 验证清单逐项确认
 
-## 编译环境配置（关键）
+## 编译环境配置（关键，必须完成）
 
-hvigorw 不在系统 PATH 里，编译前必须配置环境变量，否则报错。
+**编译是升级流程的硬依赖**：③废弃API检测靠编译告警，⑥验证靠编译结果。**装了 DevEco Studio 就一定有 hvigorw**——配好环境变量即可。不允许以"找不到 hvigorw"为由跳过编译或中止流程。
 
-DevEco Studio 的安装路径因平台和用户而异，**不要写死路径**，用以下方式动态获取：
+### hvigorw 定位与配置（多平台 robust 探测）
+
+hvigorw 不在系统 PATH 里，编译前必须定位 DevEco Studio 安装路径并配置环境变量。**不要写死路径**——安装位置因平台/用户/版本而异，用以下脚本动态探测：
 
 ```bash
-# 1. 找到 DevEco Studio 安装路径（macOS）
-DEVECO_HOME=$(find /Applications -maxdepth 1 -name "DevEco*" -type d 2>/dev/null | head -1)
-# 如果不在 /Applications，让用户提供：echo $DEVECO_HOME 或 which hvigorw
+# 第 1 步：检查是否已在 PATH
+if command -v hvigorw >/dev/null 2>&1; then
+  echo "hvigorw 已在 PATH"
+else
+  # 第 2 步：定位 DevEco Studio 安装路径（按平台）
+  DEVECO_HOME=""
+  # macOS：/Applications 或 ~/Applications
+  [ -z "$DEVECO_HOME" ] && DEVECO_HOME=$(find /Applications ~/Applications -maxdepth 2 -name "DevEco*Studio*" -type d 2>/dev/null | head -1)
+  # Windows (Git Bash/WSL)：/c/Program Files/Huawei/
+  [ -z "$DEVECO_HOME" ] && DEVECO_HOME=$(ls -d /c/Program\ Files/Huawei/DevEco*Studio 2>/dev/null | head -1)
+  # Linux：/opt 或 ~/
+  [ -z "$DEVECO_HOME" ] && DEVECO_HOME=$(find /opt ~ -maxdepth 3 -name "DevEco*Studio*" -type d 2>/dev/null | head -1)
+  # 用户自定义环境变量
+  [ -z "$DEVECO_HOME" ] && [ -n "$DEVECO_STUDIO_HOME" ] && DEVECO_HOME="$DEVECO_STUDIO_HOME"
 
-# 2. 设置环境变量（路径基于 DevEco Studio 安装位置）
-export DEVECO_SDK_HOME="$DEVECO_HOME/Contents/sdk"
-export PATH="$DEVECO_HOME/Contents/tools/hvigor/bin:$PATH"
-export PATH="$DEVECO_HOME/Contents/tools/ohpm/bin:$PATH"
+  if [ -n "$DEVECO_HOME" ]; then
+    # 第 3 步：设置环境变量（macOS 可执行在 Contents/ 下，Win/Linux 直接在根下）
+    TOOLS_DIR="$DEVECO_HOME/Contents/tools"
+    SDK_DIR="$DEVECO_HOME/Contents/sdk"
+    [ ! -d "$TOOLS_DIR" ] && TOOLS_DIR="$DEVECO_HOME/tools"      # Win/Linux 布局
+    [ ! -d "$SDK_DIR" ]  && SDK_DIR="$DEVECO_HOME/sdk"
+    export DEVECO_SDK_HOME="$SDK_DIR"
+    export PATH="$TOOLS_DIR/hvigor/bin:$TOOLS_DIR/ohpm/bin:$PATH"
+    echo "已配置 hvigorw（来自 $DEVECO_HOME）"
+  else
+    # 第 4 步：都没找到，向用户索取路径（不能放弃）
+    echo "❌ 未自动找到 DevEco Studio。请提供安装路径："
+    echo "   macOS: 拖 DevEco Studio 图标到终端获取路径，或 ls /Applications | grep DevEco"
+    echo "   Win:   在 DevEco 里看 File > Settings > SDK Manager 的 SDK Location"
+    echo "   或直接执行: find / -name hvigorw -type f 2>/dev/null"
+  fi
+fi
 
-# 3. 确认 hvigorw 可用
+# 第 5 步：验证 hvigorw 真能跑
 hvigorw --version
 ```
 
-> **如果用户提供了 hvigorw 路径**，直接用：
-> ```bash
-> export PATH="<hvigorw所在目录>:$PATH"
-> export DEVECO_SDK_HOME="<SDK目录>"  # 指向 sdk 目录，不是 sdk/default
-> ```
+> **关键注意**：`DEVECO_SDK_HOME` 必须指向 `Contents/sdk`（macOS）或 `sdk`（Win/Linux），让 hvigor 自己找 default 子目录——**不要**指向 `Contents/sdk/default`。
 
-**关键注意**：`DEVECO_SDK_HOME` 必须指向 `Contents/sdk`（让 hvigor 自己找 default 子目录），不是 `Contents/sdk/default`。
+### 如果自动探测失败
+
+向用户索取路径后，手动配置：
+```bash
+# 用户提供 DevEco Studio 安装路径后
+export DEVECO_SDK_HOME="<路径>/Contents/sdk"   # macOS；Win/Linux 去掉 Contents/
+export PATH="<路径>/Contents/tools/hvigor/bin:$PATH"
+export PATH="<路径>/Contents/tools/ohpm/bin:$PATH"
+hvigorw --version  # 确认
+```
 
 **常见环境报错与修复：**
 
 | 报错 | 原因 | 修复 |
 |-----|------|------|
-| `hvigorw not found` | hvigorw 不在 PATH | 找到 DevEco Studio 安装路径，加 tools/hvigor/bin 到 PATH |
+| `hvigorw not found` | hvigorw 不在 PATH | 运行上方探测脚本定位 DevEco Studio，配 PATH |
 | `Invalid value of 'DEVECO_SDK_HOME'` | 未设置 SDK 路径 | export DEVECO_SDK_HOME |
 | `SDK component missing` | DEVECO_SDK_HOME 指错了层级 | 指向 `Contents/sdk`（让 hvigor 自己找 default 子目录），不是 `Contents/sdk/default` |
 | `compatibleSdkVersion` 对应的 SDK 未安装 | 装的 SDK 版本低于工程配置 | 在 DevEco SDK Manager 下载对应版本 |
+| Win 下 `hvigorw` 无扩展名报错 | Git Bash 不认 .bat | 用 `hvigorw.bat` 或在 cmd/PowerShell 执行 |
 
 **确认 SDK 版本：**
 ```bash
