@@ -67,7 +67,7 @@ grep '@ohos/' oh-package.json5
 - `@ohos/hypium`（测试框架）
 - `@ohos/axios`（HTTP）
 
-如不确定，先保留原版本，编译时若报不兼容再升级。
+保留原版本，编译时若有不兼容报错再升级对应依赖。
 
 ## 常见报错与修复
 

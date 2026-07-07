@@ -22,8 +22,8 @@ version: 1.0.0
 # 项目级
 grep -E "compatibleSdkVersion|targetSdkVersion|compileSdkVersion" build-profile.json5
 
-# 模块级（entry）
-find . -name "build-profile.json5" -path "*/entry/*" -exec grep -E "targetSdkVersion" {} \;
+# 模块级（所有模块，模块名不一定是 entry，从 build-profile.json5 的 modules[].name 读取）
+find . -name "build-profile.json5" ! -path "*/node_modules/*" ! -path "*/oh_modules/*" -exec grep -lH "targetSdkVersion\|apiType" {} \;
 ```
 
 ### 2. 读 oh-package.json5（依赖版本）
@@ -69,8 +69,9 @@ find . -name "module.json5" -exec grep -E "type|srcEntry" {} \;
 
 后续环节:
   ② 配置升级 → 用 harmonyos-upgrade-config
-  ③ 行为变化 → 读 5.1.0 之后所有版本的行为变化（用 harmonyos-behavior-changes）
-  ④ 验证 → 用 harmonyos-upgrade-verify
+  ③ 废弃API迁移 → 用 deprecated-apis
+  ④ 状态管理 V1→V2 → 用 harmonyos-behavior-changes
+  ⑤ 验证 → 用 harmonyos-upgrade-verify
 ```
 
 ## 关键判断
