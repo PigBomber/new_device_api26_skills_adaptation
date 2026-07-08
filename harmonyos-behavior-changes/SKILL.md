@@ -2,7 +2,7 @@
 name: harmonyos-behavior-changes
 description: >
   HarmonyOS 项目升级中的行为变化适配 + 状态管理 V1→V2 迁移环节。当用户说「升级后哪些接口行为变了」「升到 26 后 Toast 样式不对」「触摸热区变了」「组件默认效果变了」「targetSdkVersion 升级影响」「版本隔离是什么意思」「状态管理 V1 迁 V2」「@Component 改 @ComponentV2」「@State 改 @Local」「@Watch 改 @Monitor」时触发。
-  属于升级流程的④状态管理 V1→V2 + ⑤行为变化环节，通常由 harmonyos-upgrade 总 skill 路由调用。
+  属于升级流程的步骤4状态管理 V1→V2 + 步骤5行为变化环节，通常由 harmonyos-upgrade 总 skill 路由调用。
 version: 2.0.0
 ---
 

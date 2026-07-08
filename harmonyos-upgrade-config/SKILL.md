@@ -2,7 +2,7 @@
 name: harmonyos-upgrade-config
 description: >
   HarmonyOS 项目升级的配置文件修改环节。当用户说「compatibleSdkVersion 怎么改」「targetSdkVersion 报错」「build-profile 版本号格式不对」「升级 SDK 版本」「oh-package 依赖要升级吗」「版本号格式错误 api version parameter is illegal」时触发。
-  本 skill 负责改 build-profile.json5 / oh-package.json5 / module.json5 中的版本相关字段，把项目从旧版本升到 26.0.0。属于升级流程的②配置环节，通常由 harmonyos-upgrade 总 skill 路由调用。
+  本 skill 负责改 build-profile.json5 / oh-package.json5 / module.json5 中的版本相关字段，把项目从旧版本升到 26.0.0。属于升级流程的步骤2配置环节，通常由 harmonyos-upgrade 总 skill 路由调用。
 version: 1.0.0
 ---
 

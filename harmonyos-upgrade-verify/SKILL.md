@@ -2,7 +2,7 @@
 name: harmonyos-upgrade-verify
 description: >
   HarmonyOS 项目升级的编译验证与多设备检查环节。当用户说「升级后编译报错」「hvigorw ERROR」「编译失败怎么修」「升级完要验证什么」「多设备测试」「错误码 xxx 什么意思」时触发。
-  本 skill 负责 hvigorw 编译校验、错误码分类修复、多设备/UX 验证清单。属于升级流程的④验证环节，通常由 harmonyos-upgrade 总 skill 路由调用。
+  本 skill 负责 hvigorw 编译校验、错误码分类修复、多设备/UX 验证清单。属于升级流程的步骤6验证环节，通常由 harmonyos-upgrade 总 skill 路由调用。
 version: 1.0.0
 ---
 
@@ -17,7 +17,7 @@ version: 1.0.0
 
 ## 编译环境配置（关键，必须完成）
 
-**编译是升级流程的硬依赖**：③废弃API检测靠编译告警，⑥验证靠编译结果。**装了 DevEco Studio 就一定有 hvigorw**——配好环境变量即可。不允许以"找不到 hvigorw"为由跳过编译或中止流程。
+**编译是升级流程的硬依赖**：步骤3废弃API检测靠编译告警，步骤6验证靠编译结果。**装了 DevEco Studio 就一定有 hvigorw**——配好环境变量即可。不允许以"找不到 hvigorw"为由跳过编译或中止流程。
 
 ### hvigorw 定位与配置（多平台 robust 探测）
 

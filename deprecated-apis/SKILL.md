@@ -250,7 +250,7 @@ Kit 从一个模块迁移到另一个，旧 import 路径废弃。例如：
 Stage 模型全面替代 FA 模型。FA 模型特有的 API（PageAbility 相关）在 API 10+ 已标记废弃。升级到 26.0.0 时，ArkUI 接口新增了"仅支持 Stage 模型"的约束（见 behavior-changes 26.0.0 无版本隔离条目）。
 
 ### 3. 状态管理 V1 装饰器（必须迁移）
-V1 装饰器（@State/@Prop/@Link 等）在 26.0.0 虽然还能编译运行，但**升级时必须迁移到 V2**。这是升级流程的必要环节（见 harmonyos-upgrade todo 清单步骤④）。详见 harmonyos-behavior-changes 的状态管理迁移指南。
+V1 装饰器（@State/@Prop/@Link 等）在 26.0.0 虽然还能编译运行，但**升级时必须迁移到 V2**。这是升级流程的必要环节（见 harmonyos-upgrade todo 清单步骤4）。详见 harmonyos-behavior-changes 的状态管理迁移指南。
 
 ### 4. 接口签名变更
 部分接口的参数列表或返回类型变更，旧签名废弃。编译时通常报类型不匹配错误。

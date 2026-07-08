@@ -13,7 +13,7 @@ version: 2.0.0
 
 **收到升级请求后，先配置好 hvigorw 编译环境，再用 TodoWrite 创建 todo 清单**（按实际工程情况填入数量），然后逐步执行。**不允许跳过任何环节**。
 
-### 第 0 步：配置 hvigorw 编译环境（必须完成，编译是③⑥的前提）
+### 第 0 步：配置 hvigorw 编译环境（必须完成，编译是步骤3、6的前提）
 
 **编译是升级流程的硬依赖**——废弃 API 检测靠编译告警、最终验证靠编译结果。**只要装了 DevEco Studio，本地就一定有 hvigorw**，配好环境变量即可。
 
@@ -49,25 +49,25 @@ hvigorw --version || echo "错误：hvigorw 仍不可用，请用户提供 DevEc
 ### 内置 todo 清单模板（复制到 TodoWrite）
 
 ```
-①检测：读 build-profile.json5 定基线版本、判升级路径
-②配置升级：改 compatibleSdkVersion/targetSdkVersion → "26.0.0"
-③废弃API迁移：clean 编译捕获 deprecated 告警 → 按对照表全部迁移（目标 0）
-④状态管理 V1→V2：
+1. 检测：读 build-profile.json5 定基线版本、判升级路径
+2. 配置升级：改 compatibleSdkVersion/targetSdkVersion → "26.0.0"
+3. 废弃API迁移：clean 编译捕获 deprecated 告警 → 按对照表全部迁移（目标 0）
+4. 状态管理 V1→V2：
    4a. 应用级状态：@StorageLink/@StorageProp/AppStorage → AppStorageV2
    4b. 数据类：@Observed/@ObjectLink → @ObservedV2/@Trace
    4c. 跨层级：@Provide/@Consume → @Provider/@Consumer
    4d. 组件级：@Component→@ComponentV2 + @State→@Local/@Param + @Prop→@Param + @Link→@Param+@Event
    4e. 监听：@Watch→@Monitor（检查同步→异步时序变化）
-⑤行为变化适配：按基线版本读 changelog，适配无版本隔离的必须改项
-⑥编译验证：0 ERROR + 0 deprecated + 运行时无崩溃
-⑦经验沉淀：新踩的坑写回 skill
+5. 行为变化适配：按基线版本读 changelog，适配无版本隔离的必须改项
+6. 编译验证：0 ERROR + 0 deprecated + 运行时无崩溃
+7. 经验沉淀：新踩的坑写回 skill
 ```
 
-> **铁律**：编译必须执行。③废弃API迁移依赖编译告警发现全部废弃点（含 grep 查不到的 Resource 重载、别名、表外项），⑥验证依赖编译结果确认 0 ERROR。**绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——装了 DevEco 就有 hvigorw，配好环境即可（用户已踩过此坑）。
+> **铁律**：编译必须执行。步骤3废弃API迁移依赖编译告警发现全部废弃点（含 grep 查不到的 Resource 重载、别名、表外项），步骤6验证依赖编译结果确认 0 ERROR。**绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——装了 DevEco 就有 hvigorw，配好环境即可（用户已踩过此坑）。
 
 ### 如何使用这个清单
 
-1. **先跑①检测**，拿到基线版本和 V1 装饰器统计，把实际数量填进 todo
+1. **先跑步骤1检测**，拿到基线版本和 V1 装饰器统计，把实际数量填进 todo
 2. **逐步执行**，每完成一项标记 completed，开始下一项标记 in_progress
 3. **每项完成后编译验证**，有错误立即修
 4. **如果某项工程里不存在**（如没有 @StorageLink），标记 completed 并注明"工程无此项"
@@ -78,32 +78,32 @@ hvigorw --version || echo "错误：hvigorw 仍不可用，请用户提供 DevEc
 ## 升级流程的 5 个环节
 
 ```
-①检测  →  ②配置  →  ③废弃API  →  ④状态管理V1→V2  →  ⑤验证
+1. 检测  →  2. 配置  →  3. 废弃API  →  4. 状态管理V1→V2  →  5. 验证
 ```
 
 | 环节 | 做什么 | 对应子 skill |
 |------|--------|-------------|
-| ① 检测 | 读 build-profile.json5 定基线、统计 V1 装饰器数量、判升级路径 | `harmonyos-upgrade-detect` |
-| ② 配置 | 改 compatibleSdkVersion / targetSdkVersion → "26.0.0" | `harmonyos-upgrade-config` |
-| ③ 废弃API | clean 编译捕获 deprecated → 全部迁移到 0 | `deprecated-apis` |
-| ④ 状态管理 | V1→V2 迁移（应用级状态→数据类→跨层级→组件级→监听） | `harmonyos-behavior-changes` |
-| ⑤ 验证 | hvigorw 编译、运行时无崩溃、deprecated=0 | `harmonyos-upgrade-verify` |
+| 1. 检测 | 读 build-profile.json5 定基线、统计 V1 装饰器数量、判升级路径 | `harmonyos-upgrade-detect` |
+| 2. 配置 | 改 compatibleSdkVersion / targetSdkVersion → "26.0.0" | `harmonyos-upgrade-config` |
+| 3. 废弃API | clean 编译捕获 deprecated → 全部迁移到 0 | `deprecated-apis` |
+| 4. 状态管理 | V1→V2 迁移（应用级状态→数据类→跨层级→组件级→监听） | `harmonyos-behavior-changes` |
+| 5. 验证 | hvigorw 编译、运行时无崩溃、deprecated=0 | `harmonyos-upgrade-verify` |
 
 ## 各环节执行要点
 
-### ①检测（必须先做）
+### 1. 检测（必须先做）
 ```bash
 # 读版本
 grep -E "compatibleSdkVersion|targetSdkVersion" build-profile.json5
-# 统计 V1 装饰器（决定 ④ 的工作量）——排除 widget/卡片目录（WidgetCard 不迁 V2）
+# 统计 V1 装饰器（决定步骤4的工作量）——排除 widget/卡片目录（WidgetCard 不迁 V2）
 grep -rc "@Component\b\|@State\b\|@Prop\b\|@Link\b\|@Watch\b\|@Provide\b\|@Consume\b\|@StorageLink\b\|@StorageProp\b\|@Observed\b\|@ObjectLink\b" \
   --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules .
 ```
 
-### ②配置升级
+### 2. 配置升级
 改 build-profile.json5：`compatibleSdkVersion` 和 `targetSdkVersion` 都改成 `"26.0.0"`。
 
-### ③废弃API迁移（铁律：deprecated 必须降到 0）
+### 3. 废弃API迁移（铁律：deprecated 必须降到 0）
 ```bash
 hvigorw clean --no-daemon
 hvigorw assembleHap ... 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
@@ -113,7 +113,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 ```
 查 `deprecated-apis` skill 的对照表和迁移档案，逐个迁移。**工具类的 getContext 也要改**。
 
-### ④状态管理 V1→V2（最容易遗漏的环节）
+### 4. 状态管理 V1→V2（最容易遗漏的环节）
 
 > **注意：排除 WidgetCard（服务卡片）**：`widget/`、`widgetcard/` 目录或 module.json5 里 `type: "form"` 的模块**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。
 
@@ -133,7 +133,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 
 详见 `harmonyos-behavior-changes` 的 `state-management/migration-guide.md`。
 
-### ⑤验证
+### 5. 验证
 - `hvigorw assembleHap`：0 ERROR
 - deprecated 告警：工程代码 0
 - 运行时：启动不崩溃（注意字段初始化不能用 UIContext）
@@ -143,7 +143,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 
 | 用户说的话 | 调用 |
 |---------------------|------|
-| "帮我把这个项目升级到 26.0.0" | 创建 todo 清单，从①开始 |
+| "帮我把这个项目升级到 26.0.0" | 创建 todo 清单，从步骤1开始 |
 | "compatibleSdkVersion 怎么改" | `harmonyos-upgrade-config` |
 | "deprecated 警告怎么修" | `deprecated-apis` |
 | "@State 改 @Local" / "@Watch 改 @Monitor" | `harmonyos-behavior-changes` |

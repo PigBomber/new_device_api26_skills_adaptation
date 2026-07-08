@@ -2,7 +2,7 @@
 name: harmonyos-upgrade-detect
 description: >
   HarmonyOS 项目升级的第一步：检测当前版本、判定升级路径。当用户说「帮我升级项目」「这个项目现在是什么版本」「从我的版本升到 26.0.0 要经过哪些版本」「升级路径怎么定」时触发。
-  本 skill 读 build-profile.json5 / oh-package.json5 / module.json5，输出当前 API level 和到 26.0.0 的升级路径。属于升级流程的①检测环节，通常由 harmonyos-upgrade 总 skill 路由调用。
+  本 skill 读 build-profile.json5 / oh-package.json5 / module.json5，输出当前 API level 和到 26.0.0 的升级路径。属于升级流程的步骤1检测环节，通常由 harmonyos-upgrade 总 skill 路由调用。
 version: 1.0.0
 ---
 
@@ -68,10 +68,10 @@ find . -name "module.json5" -exec grep -E "type|srcEntry" {} \;
   → 6.0.2(22) → 6.1.0(23) → 6.1.1(24) → 26.0.0
 
 后续环节:
-  ② 配置升级 → 用 harmonyos-upgrade-config
-  ③ 废弃API迁移 → 用 deprecated-apis
-  ④ 状态管理 V1→V2 → 用 harmonyos-behavior-changes
-  ⑤ 验证 → 用 harmonyos-upgrade-verify
+  2. 配置升级 → 用 harmonyos-upgrade-config
+  3. 废弃API迁移 → 用 deprecated-apis
+  4. 状态管理 V1→V2 → 用 harmonyos-behavior-changes
+  5. 验证 → 用 harmonyos-upgrade-verify
 ```
 
 ## 关键判断
@@ -82,7 +82,7 @@ find . -name "module.json5" -exec grep -E "type|srcEntry" {} \;
 | FA 模型 | 警告：升级前需先迁移到 Stage 模型（API 10+ 接口要求） |
 | API level < 12 | 警告：跨度大，建议先升到 5.0.0(API12) 再继续 |
 | 各模块 targetSdkVersion 不一致 | 提示统一 |
-| 工程含 WidgetCard（`type: "form"` 模块或 `widget/` 目录） | 提示：卡片代码不迁 V2（兼容性不好），④状态管理迁移时排除卡片目录 |
+| 工程含 WidgetCard（`type: "form"` 模块或 `widget/` 目录） | 提示：卡片代码不迁 V2（兼容性不好），步骤4状态管理迁移时排除卡片目录 |
 
 ## 与其他子 skill 的衔接
 
