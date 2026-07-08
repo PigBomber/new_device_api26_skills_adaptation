@@ -117,26 +117,30 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
 |---------|---------|-------|------|
 | `TextReaderIcon` | `TextReaderIconV2` | 24 | 朗读听筒图标，华为官方明确：V1 工程用 TextReaderIcon，V2 工程必须用 TextReaderIconV2 |
 
-**铁律**：升级到 API 26 的工程，遇到上述 V1 高级组件**必须替换成对应 V2 版本**。V1 高级组件在 V2 数据流中会出现：
-- 状态不同步（V1 的 `@State`/`@Link` 不被 V2 的 `@Local`/`@Param` 观测）—— 华为官方原文："使用 V1 装饰器时用 TextReaderIcon，使用 V2 装饰器时**需要**用 TextReaderIconV2"
-- 编译报错 10905213（V2 组件嵌套 V1 @Link 组件）
-- 选中态/进度等交互态丢失
+**铁律（按映射表有无分两种情况）**：
+- **映射表有 V2 替代的**（上表 SegmentButton/ProgressButton/SubHeader/ToolBar/Dialog/TextReaderIcon 等）→ **必须替换成 V2 版本，禁止把所在 struct 回退到 @Component**。V1 高级组件在 V2 数据流中会出现：
+  - 状态不同步（V1 的 `@State`/`@Link` 不被 V2 的 `@Local`/`@Param` 观测）—— 华为官方原文："使用 V1 装饰器时用 TextReaderIcon，使用 V2 装饰器时**需要**用 TextReaderIconV2"
+  - 编译报错 10905213（V2 组件嵌套 V1 @Link 组件）
+  - 选中态/进度等交互态丢失
+- **映射表没有 V2 替代的**（见下方「无 V2 替代」白名单，如 ComposeTitleBar/Chip/TreeView 等）→ 该 struct **可以保留 @Component**，父子组件 V1/V2 可混用，不影响外层 V2 化
 
 **处理策略**：
 1. 全局搜 V1 用法（注意两个 kit 都要查）：
    - `import.*advanced\.(SegmentButton|ProgressButton|SubHeader|ToolBar|Dialog)['"]`（ArkUI）
    - `import.*TextReaderIcon['"]` 和 `import.*\{.*TextReaderIcon['"]`（SpeechKit，注意不要误伤 `TextReaderIconV2`）
-2. 换成带 `V2` 后缀的对应组件：
-   - ArkUI 高级组件 → 仍从 `@kit.ArkUI` 导入
-   - TextReaderIcon → 从 `@kit.SpeechKit` 导入 `TextReaderIconV2` + `UpReadState`
-3. **不允许保留 V1**——即使替代组件 API 不同，也要改成 V2 版本
+2. 命中后查上方映射表：
+   - **在映射表里（有 V2 替代）**→ 必须替换。ArkUI 高级组件仍从 `@kit.ArkUI` 导入；TextReaderIcon 从 `@kit.SpeechKit` 导入 `TextReaderIconV2` + `UpReadState`
+   - **不在映射表里（查下方白名单确认无 V2 替代）**→ 该 struct 保留 @Component，在迁移记录里标注「无 V2 替代，struct 保留 V1」
 
 > **TextReaderIcon → TextReaderIconV2 关键差异**（来自华为官方文档）：
 > - 导入：`import { TextReaderIconV2, UpReadState } from '@kit.SpeechKit'`
 > - V2 用 `@Param readState` + `@Event upReadState`（回调函数，类型 `UpReadState = (readState: ReadStateCode) => void`），替代 V1 的内部状态绑定
 > - 配合 `TextReader.init()` / `TextReader.start()` 使用（这两个是 kit 的全局 API，V1/V2 通用，不用改）
 
-> **未确认有 V2 版本的 ArkUI 高级组件**：如 `ComposeTitleBar`、`EditableTitleBar`、`SelectTitleBar`、`TabTitleBar`、`Filter`、`GridObjectSortComponent`、`TreeView`、`Counter`、`SwipeRefresher`、`SelectionMenu`、`Popup`、`ComposeListItem`、`Chip`/`ChipGroup`、`ArcButton`、`FormMenu`、`DownloadFileButton` 等——在当前 SDK（API 26）的 `@ohos.arkui.advanced.*` 下**没有对应 V2 文件**。这类组件所在 struct 若需 V2 化，目前只能在 struct 级别评估能否隔离，或等待官方 V2 版本。遇到时在迁移记录里标注「无 V2 替代」。
+> **无 V2 替代的 ArkUI 高级组件**（这些在当前 SDK API 26 的 `@ohos.arkui.advanced.*` 下**没有对应 V2 文件**，遇到时**该 struct 保留 @Component 即可**，父子组件 V1/V2 可混用）：
+> `ComposeTitleBar`、`EditableTitleBar`、`SelectTitleBar`、`TabTitleBar`、`Filter`、`GridObjectSortComponent`、`TreeView`、`Counter`、`SwipeRefresher`、`SelectionMenu`、`Popup`、`ComposeListItem`、`Chip`/`ChipGroup`、`ArcButton`、`FormMenu`、`DownloadFileButton` 等。
+>
+> **判断方法**：遇到 10905213 报错，先查上方映射表。在表里 → 必须替换成 V2；不在表里 → 查本白名单，确认无 V2 替代后该 struct 保留 @Component，并在迁移记录里标注「无 V2 替代」。
 
 ### SegmentButton → SegmentButtonV2 迁移（API 经 SDK d.ets 核实）
 
@@ -490,7 +494,7 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 - [ ] `@Prop` 改 `@Param` 的地方，注意复杂类型从深拷贝变引用传递
 - [ ] `@Observed` 类加了 `@Trace` 的属性是否完整（漏加会导致不触发 UI 更新）
 - [ ] **每个 `@State` 改 `@Local` 前，先检查该属性是否被父组件传值**——被传值的必须用 `@Param`（否则报错 10905324）
-- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton、TextReaderIcon、ProgressButton、SubHeader、ToolBar）——**必须**查 V2 替代组件并替换，**禁止把 struct 回退到 @Component**（否则报错 10905213，见第 5 节映射表）
+- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton、TextReaderIcon、ProgressButton、SubHeader、ToolBar）——查第 5 节映射表：**有 V2 替代的必须替换（禁止回退 @Component）**；**无 V2 替代的（见白名单）该 struct 保留 @Component**（否则报错 10905213）
 
 > V1/V2 同一组件内混用会编译报错，按错误提示逐个修正即可。父子组件分别用 V1/V2 是允许的。
 
