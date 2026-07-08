@@ -82,6 +82,7 @@ find . -name "module.json5" -exec grep -E "type|srcEntry" {} \;
 | FA 模型 | 警告：升级前需先迁移到 Stage 模型（API 10+ 接口要求） |
 | API level < 12 | 警告：跨度大，建议先升到 5.0.0(API12) 再继续 |
 | 各模块 targetSdkVersion 不一致 | 提示统一 |
+| 工程含 WidgetCard（`type: "form"` 模块或 `widget/` 目录） | 提示：卡片代码不迁 V2（兼容性不好），④状态管理迁移时排除卡片目录 |
 
 ## 与其他子 skill 的衔接
 

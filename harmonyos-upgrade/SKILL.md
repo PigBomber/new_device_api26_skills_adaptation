@@ -95,8 +95,9 @@ hvigorw --version || echo "❌ hvigorw 仍不可用，请用户提供 DevEco Stu
 ```bash
 # 读版本
 grep -E "compatibleSdkVersion|targetSdkVersion" build-profile.json5
-# 统计 V1 装饰器（决定 ④ 的工作量）
-grep -rc "@Component\b\|@State\b\|@Prop\b\|@Link\b\|@Watch\b\|@Provide\b\|@Consume\b\|@StorageLink\b\|@StorageProp\b\|@Observed\b\|@ObjectLink\b" --include="*.ets" .
+# 统计 V1 装饰器（决定 ④ 的工作量）——排除 widget/卡片目录（WidgetCard 不迁 V2）
+grep -rc "@Component\b\|@State\b\|@Prop\b\|@Link\b\|@Watch\b\|@Provide\b\|@Consume\b\|@StorageLink\b\|@StorageProp\b\|@Observed\b\|@ObjectLink\b" \
+  --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules .
 ```
 
 ### ②配置升级
@@ -114,6 +115,8 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 
 ### ④状态管理 V1→V2（最容易遗漏的环节）
 
+> **⚠️ 排除 WidgetCard（服务卡片）**：`widget/`、`widgetcard/` 目录或 module.json5 里 `type: "form"` 的模块**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。
+
 **迁移顺序（基础先行）：**
 1. **4a 应用级状态**：@StorageLink/@StorageProp → 定义 @ObservedV2 数据类 + AppStorageV2.connect
 2. **4b 数据类**：@Observed → @ObservedV2，属性加 @Trace；@ObjectLink → @Param
@@ -125,7 +128,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 5. **4e 监听**：@Watch → @Monitor（⚠️ 同步→异步时序变化）
 
 **纯 V1 工程（0 个 @ComponentV2）的特殊策略：**
-- 应用级状态用**双写桥模式**（写入端同时写 V1 AppStorage 和 V2 AppStorageV2），确保未迁的 V1 组件仍能响应
+- 全量迁移，不留 V1 残留（不用双写桥等中间态）
 - 组件级按依赖关系排序，叶子组件先迁
 
 详见 `harmonyos-behavior-changes` 的 `state-management/migration-guide.md`。

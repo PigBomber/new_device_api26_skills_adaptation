@@ -231,12 +231,18 @@ struct SegMultiV2 {
 ### 第 1 步：识别需要迁移的范围
 
 ```bash
-# 组件级 V1 装饰器
-grep -rn "@Component\b\|@State\|@Prop\|@Link\|@Provide\|@Consume\|@Watch\|@Observed\|@ObjectLink" --include="*.ets" <工程路径> | grep -v "@ComponentV2"
+# 组件级 V1 装饰器（排除 widget/卡片目录——WidgetCard 不迁 V2，见下方说明）
+grep -rn "@Component\b\|@State\|@Prop\|@Link\|@Provide\|@Consume\|@Watch\|@Observed\|@ObjectLink" \
+  --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules \
+  <工程路径> | grep -v "@ComponentV2"
 
 # 应用级 V1 状态（@StorageLink/@StorageProp/AppStorage/LocalStorage/PersistentStorage）
-grep -rn "@StorageLink\|@StorageProp\|AppStorage\|LocalStorage\|PersistentStorage" --include="*.ets" <工程路径>
+grep -rn "@StorageLink\|@StorageProp\|AppStorage\|LocalStorage\|PersistentStorage" \
+  --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules \
+  <工程路径>
 ```
+
+> **⚠️ 排除 WidgetCard（服务卡片）**：卡片目录（`widget/`、`widgetcard/`，或 module.json5 里 `type: "form"` 的模块）**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。统计和迁移时必须排除，否则会把卡片的 @Component/@State 算进迁移量导致误迁。
 
 ### 第 2 步：确定迁移顺序
 
@@ -505,17 +511,13 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 | 新开发的应用 | 直接用 V2 |
 | 老应用升级到 API 26 | **必须迁移**。V1→V2 是升级流程的必要环节，不留 V1 残留 |
 | 老应用暂不升级 | 不涉及迁移（未升级就不需要迁 V2） |
+| **WidgetCard（服务卡片）** | **不迁移 V2**。WidgetCard 当前对 @ComponentV2 兼容性不好，卡片代码保留 @Component/@State 等 V1 装饰器 |
 
 > V1 存在深度观测缺失、冗余更新、装饰器配合限制等问题。**升级时必须迁移 V2**——这是升级流程的必要环节，不留 V1 残留，不保留双写桥等中间态。
+>
+> **例外：WidgetCard（服务卡片）不迁 V2**。卡片代码（通常在 `*/widget/` 或 `*/widgetcard/` 目录，module.json5 里 `type: "form"`）当前对 @ComponentV2 兼容性不好，**保留 V1 装饰器**，不要改成 @ComponentV2。统计 V1 装饰器数量和迁移时要排除卡片目录，避免误迁。
 
 ## 参考文档
-
-- [v1-v2-difference.md](v1-v2-difference.md) — V1/V2 机制差异（观测深度、@Watch/@Monitor、更新流程）
-- [overview.md](overview.md) — 状态管理概述（V1/V2 装饰器总览）
-- [mvvm-v1.md](mvvm-v1.md) — MVVM V1 模式
-- [mvvm-v2.md](mvvm-v2.md) — MVVM V2 模式
-- [faq.md](faq.md) — 常见问题
-- [glossary.md](glossary.md) — 术语表
 
 ## 缺失文档（需手动补充）
 
