@@ -18,7 +18,7 @@ version: 2.0.0
 
 包含：
 - V1→V2 装饰器对照表（20 项）
-- 机制差异（观测深度、@Watch 同步 vs @Monitor 异步 ⚠️ 最易踩坑）
+- 机制差异（观测深度、@Watch 同步 vs @Monitor 异步，最易踩坑）
 - 5 步迁移步骤（应用级状态→数据类→跨层级→组件级→监听时序）
 - 每条规则的代码对比（改前/改后）
 - 迁移易错点（@Local 不可外部初始化、V2 组件不能含 V1 @Link 系统组件、字段初始化崩溃等）
@@ -69,4 +69,4 @@ version: 2.0.0
 
 ## See Also
 
-- [references/state-management/migration-guide.md](references/state-management/migration-guide.md) — ⭐ V1→V2 迁移指南（20项对照+5步流程+踩坑记录）
+- [references/state-management/migration-guide.md](references/state-management/migration-guide.md) — V1→V2 迁移指南（20项对照+5步流程+踩坑记录）

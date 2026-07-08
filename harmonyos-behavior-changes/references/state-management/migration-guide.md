@@ -28,7 +28,7 @@ V2 让"数据本身可观察"，解决了以上全部问题。
 | 可观察类 | `@Observed` | `@ObservedV2` | @ObservedV2 本身无观测能力，需配 @Trace |
 | 类属性追踪 | `@Track` | `@Trace` | V1 @Track 只能一层；V2 @Trace 支持深度观测 |
 | 嵌套对象 | `@ObjectLink` | 直接用 `@Param` | V2 不需要 @ObjectLink，@ObservedV2+@Trace 即可深度观测 |
-| 变化监听 | `@Watch` | `@Monitor` | **同步→异步**：@Watch 同步执行多次，@Monitor 异步执行一次（⚠️ 最易踩坑） |
+| 变化监听 | `@Watch` | `@Monitor` | **同步→异步**：@Watch 同步执行多次，@Monitor 异步执行一次（最易踩坑） |
 | 计算属性 | 无 | `@Computed` | V2 新增 |
 | 应用级状态 | `AppStorage` + `@StorageLink/@StorageProp` | `AppStorageV2` + `connect()` | 写法完全不同，需定义 @ObservedV2 类，详见第 3 步 |
 | 持久化 | `PersistentStorage` | `PersistenceV2` + `connect()` | 解耦 AppStorage，可独立使用 |
@@ -44,7 +44,7 @@ V2 让"数据本身可观察"，解决了以上全部问题。
 - **V1**：只观察第一层。`this.objA.propA` 改了能感知，但 `this.objA.objB.propB` 改了**感知不到**
 - **V2**：只要被 `@Trace` 装饰，嵌套多深都能感知
 
-### 2. @Watch（V1 同步） vs @Monitor（V2 异步）⚠️ 最易出 bug
+### 2. @Watch（V1 同步） vs @Monitor（V2 异步）—— 最易出 bug
 ```typescript
 // V1: @Watch 同步执行，变量改 N 次回调执行 N 次
 @State @Watch('onChange') count: number = 0;
@@ -59,7 +59,7 @@ onChange() { /* count 每次改都立即执行 */ }
 ### 3. 组件内不能混用 V1/V2 装饰器
 一个 `@Component` 内只能用 V1 装饰器（@State/@Prop/@Link...），一个 `@ComponentV2` 内只能用 V2 装饰器（@Local/@Param/@Event...）。**父子组件可以分别用 V1 和 V2**。
 
-### 4. @Local 不可外部初始化（编译报错 10905324）⚠️ 高频踩坑
+### 4. @Local 不可外部初始化（编译报错 10905324）—— 高频踩坑
 
 V1 的 `@State` 既可以内部初始化，也可以从父组件传入初始化。但 V2 的 `@Local` **只允许内部初始化，禁止外部传入**。如果父组件调用时传了该属性，编译报错：
 
@@ -75,14 +75,14 @@ ERROR 10905324: The '@Local' property 'xxx' in the custom component cannot be in
 
 **错误示例：**
 ```typescript
-// ❌ currentIndex 从父组件传入，却用了 @Local
+// 错误：currentIndex 从父组件传入，却用了 @Local
 @ComponentV2
 struct Child {
   @Local currentIndex: number = 0;  // 报错：父组件传值时 forbidden to specify
 }
 build() { Child({ currentIndex: this.idx }) }  // 父组件传值触发报错
 
-// ✅ 需要外部传入用 @Param；只同步一次加 @Once
+// 正确：需要外部传入用 @Param；只同步一次加 @Once
 @ComponentV2
 struct Child {
   @Param @Once currentIndex: number = 0;
@@ -91,7 +91,7 @@ struct Child {
 
 **迁移要点**：V1 的 `@State` 迁 V2 时，**先检查这个属性是否被父组件传值初始化**。如果被传值，用 `@Param`（或 `@Param @Once`），不能用 `@Local`。只有纯内部状态才用 `@Local`。
 
-### 5. V2 组件不能包含 V1 的 @Link 系统组件（编译报错 10905213）⚠️ 系统组件阻塞迁移
+### 5. V2 组件不能包含 V1 的 @Link 系统组件（编译报错 10905213）—— 系统组件阻塞迁移
 
 部分官方/系统组件内部使用了 V1 的 `@Link`（双向绑定）。在 `@ComponentV2` 组件里使用这些 V1 系统组件会编译报错：
 
@@ -172,7 +172,7 @@ struct SegDemoV1 {
   });
 
   build() {
-    // ❌ SegmentButton 是 V1，内部 @Link selectedIndexes，阻塞外层 V2 化
+    // 错误：SegmentButton 是 V1，内部 @Link selectedIndexes，阻塞外层 V2 化
     SegmentButton(this.options)
       .selectedIndexes([this.selectedIndex])  // 双向绑定，V1 风格
       .onSelectedChange((indexes) => { this.selectedIndex = indexes[0]; });
@@ -189,7 +189,7 @@ struct SegDemoV2 {
   ]);
 
   build() {
-    // ✅ 单向 + 回调：selectedIndex 传入，$selectedIndex 接收变更
+    // 正确：单向 + 回调：selectedIndex 传入，$selectedIndex 接收变更
     TabSegmentButtonV2({
       items: this.items,
       selectedIndex: this.selectedIndex,
@@ -220,10 +220,10 @@ struct SegMultiV2 {
 ```
 
 **易错点**：
-- ❌ 直接传字面量数组 `items: [{ text: 'x' }]` —— 类型是 `SegmentButtonV2Items`，必须 `new SegmentButtonV2Items([...])`
-- ❌ 用 `onSelectedChange` 接收回调 —— V2 没有这个属性，回调名是 `$selectedIndex` / `$selectedIndexes`
-- ❌ 忘记传 `selectedIndex` —— 它是 `@Require @Param`，缺失直接编译报错
-- ✅ 想加 icon：`new SegmentButtonV2Item({ text: '首页', icon: $r('app.media.home') })`
+- 错误：直接传字面量数组 `items: [{ text: 'x' }]` —— 类型是 `SegmentButtonV2Items`，必须 `new SegmentButtonV2Items([...])`
+- 错误：用 `onSelectedChange` 接收回调 —— V2 没有这个属性，回调名是 `$selectedIndex` / `$selectedIndexes`
+- 错误：忘记传 `selectedIndex` —— 它是 `@Require @Param`，缺失直接编译报错
+- 正确：想加 icon 用 `new SegmentButtonV2Item({ text: '首页', icon: $r('app.media.home') })`
 ```
 
 ## 迁移步骤
@@ -242,7 +242,7 @@ grep -rn "@StorageLink\|@StorageProp\|AppStorage\|LocalStorage\|PersistentStorag
   <工程路径>
 ```
 
-> **⚠️ 排除 WidgetCard（服务卡片）**：卡片目录（`widget/`、`widgetcard/`，或 module.json5 里 `type: "form"` 的模块）**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。统计和迁移时必须排除，否则会把卡片的 @Component/@State 算进迁移量导致误迁。
+> **注意：排除 WidgetCard（服务卡片）**：卡片目录（`widget/`、`widgetcard/`，或 module.json5 里 `type: "form"` 的模块）**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。统计和迁移时必须排除，否则会把卡片的 @Component/@State 算进迁移量导致误迁。
 
 ### 第 2 步：确定迁移顺序
 
@@ -331,7 +331,7 @@ PersistenceV2.connect(ThemeState, 'themeState', () => new ThemeState())!;
 3. **组件同步迁 V2**：@Component → @ComponentV2，@State → @Local/@Param
 4. **全部迁完后 V1 AppStorage 彻底清除**，不留任何 V1 残留
 
-> ⚠️ **禁止用双写桥**（同时写 V1 AppStorage 和 V2 AppStorageV2）。这是分批迁移的妥协方案，但既然目标是全部迁完 V2，双写桥只会增加复杂度——迁完后还要记得删 V1 那行，容易遗漏。一步到位更干净。
+> **注意：禁止用双写桥**（同时写 V1 AppStorage 和 V2 AppStorageV2）。这是分批迁移的妥协方案，但既然目标是全部迁完 V2，双写桥只会增加复杂度——迁完后还要记得删 V1 那行，容易遗漏。一步到位更干净。
 
 ### 第 4 步：组件级装饰器迁移（逐条配代码对比）
 
@@ -382,7 +382,7 @@ struct Child {
 }
 ```
 
-#### 4.4 @Link → @Param + @Event（父↔子双向）⚠️ 跨文件改动
+#### 4.4 @Link → @Param + @Event（父↔子双向）—— 跨文件改动
 双向绑定在 V2 拆成"数据下行(@Param) + 事件上行(@Event)"两部分，父子组件都要改。
 
 ```typescript
@@ -437,7 +437,7 @@ struct Child {
 }
 ```
 
-#### 4.6 @Watch → @Monitor ⚠️ 时序变化
+#### 4.6 @Watch → @Monitor —— 时序变化
 ```typescript
 // V1：@Watch 同步执行，变量改 N 次回调执行 N 次
 @Component

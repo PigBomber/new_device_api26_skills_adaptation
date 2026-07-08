@@ -50,7 +50,7 @@ else
     echo "已配置 hvigorw（来自 $DEVECO_HOME）"
   else
     # 第 4 步：都没找到，向用户索取路径（不能放弃）
-    echo "❌ 未自动找到 DevEco Studio。请提供安装路径："
+    echo "未找到 DevEco Studio。请提供安装路径："
     echo "   macOS: 拖 DevEco Studio 图标到终端获取路径，或 ls /Applications | grep DevEco"
     echo "   Win:   在 DevEco 里看 File > Settings > SDK Manager 的 SDK Location"
     echo "   或直接执行: find / -name hvigorw -type f 2>/dev/null"
@@ -116,7 +116,7 @@ PROJECT=$((TOTAL - OH_MODULES))
 echo "工程代码 deprecated: $PROJECT（目标 0）"
 ```
 
-⚠️ **注意事项**：
+**注意事项**：
 - 告警带 ANSI 颜色码，必须先 `sed 's/\x1b\[[0-9;]*m//g'` 去色再处理
 - **不要用 paste 命令混合不同日志文件的行**——会把旧日志的 deprecated 行和新日志的 File 行错位拼接，造成假告警
 - deprecated 告警是两行格式：`File: xxx.ets:行:列` + `'API名' has been deprecated.`，统计时用 `grep -B1` 配对

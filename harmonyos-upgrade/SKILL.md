@@ -9,7 +9,7 @@ version: 2.0.0
 
 # HarmonyOS 项目升级
 
-## ⚠️ 触发后第一件事：配置编译环境 + 创建 todo 清单
+## 触发后第一件事：配置编译环境 + 创建 todo 清单
 
 **收到升级请求后，先配置好 hvigorw 编译环境，再用 TodoWrite 创建 todo 清单**（按实际工程情况填入数量），然后逐步执行。**不允许跳过任何环节**。
 
@@ -41,7 +41,7 @@ command -v hvigorw 2>/dev/null && echo "hvigorw 已在 PATH" || {
 }
 
 # 3. 验证 hvigorw 真的能用
-hvigorw --version || echo "❌ hvigorw 仍不可用，请用户提供 DevEco Studio 安装路径（执行 echo $DEVECO_HOME 或在 DevEco 里看 Settings > SDK）"
+hvigorw --version || echo "错误：hvigorw 仍不可用，请用户提供 DevEco Studio 安装路径（执行 echo $DEVECO_HOME 或在 DevEco 里看 Settings > SDK）"
 ```
 
 **如果上述都失败**（极少见）：向用户索取 DevEco Studio 安装路径后重新配置。**不允许放弃编译**——编译告警是废弃 API 检测和最终验证的唯一可靠依据。
@@ -115,7 +115,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 
 ### ④状态管理 V1→V2（最容易遗漏的环节）
 
-> **⚠️ 排除 WidgetCard（服务卡片）**：`widget/`、`widgetcard/` 目录或 module.json5 里 `type: "form"` 的模块**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。
+> **注意：排除 WidgetCard（服务卡片）**：`widget/`、`widgetcard/` 目录或 module.json5 里 `type: "form"` 的模块**不迁 V2**——WidgetCard 当前对 @ComponentV2 兼容性不好，保留 V1 装饰器。
 
 **迁移顺序（基础先行）：**
 1. **4a 应用级状态**：@StorageLink/@StorageProp → 定义 @ObservedV2 数据类 + AppStorageV2.connect
@@ -125,7 +125,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
    - @State → @Local（纯内部）或 @Param（外部传入）
    - @Prop → @Param
    - @Link → @Param + @Event（父子双向）
-5. **4e 监听**：@Watch → @Monitor（⚠️ 同步→异步时序变化）
+5. **4e 监听**：@Watch → @Monitor（注意：同步→异步时序变化）
 
 **纯 V1 工程（0 个 @ComponentV2）的特殊策略：**
 - 全量迁移，不留 V1 残留（不用双写桥等中间态）

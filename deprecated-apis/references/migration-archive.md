@@ -61,7 +61,7 @@ this.windowStageModel.windowStage?.getMainWindowSync().getUIContext().getPromptA
 - ComprehensiveNews：46 处
 - ComprehensiveTool：58 处
 
-### ⚠️ 易错：第三方库别名混淆
+### 易错：第三方库别名混淆
 ```typescript
 // 这是第三方库别名，不是废弃 API，不能改！
 import { ToastDialog as promptAction } from '@hw-agconnect/ui-toast'
@@ -93,7 +93,7 @@ WindowUtils.window.getUIContext().animateTo({ duration: 300 }, () => { ... })
 - ComprehensiveNews：41 处
 - ComprehensiveTool：3 处
 
-### ⚠️ 易错：链式调用 vs 全局函数
+### 易错：链式调用 vs 全局函数
 ```typescript
 // 这是链式调用，不是全局函数，不要改！
 someComponent.animateTo(...)
@@ -132,7 +132,7 @@ class FileUtils {
 FileUtils.readFile(this.getUIContext().getHostContext()!)
 ```
 
-### ⚠️ getHostContext 返回 undefined
+### getHostContext 返回 undefined
 `getHostContext()` 返回 `Context | undefined`。两种处理：
 ```typescript
 // 方式1：判空（推荐）
@@ -143,14 +143,14 @@ if (ctx) { ctx.resourceManager.getString(...) }
 this.getUIContext().getHostContext()!.resourceManager.getString(...)
 ```
 
-### ⚠️ 闭包内判空失效
+### 闭包内判空失效
 ```typescript
 // 函数内判空后，闭包（回调）里仍报 undefined
 let context = this.uiContext?.getHostContext()
 if (!context) return
 someApi.then(() => {
-  fileIo.unlink(context.cacheDir)  // ❌ 闭包内控制流重置，仍报 undefined
-  fileIo.unlink(context!.cacheDir) // ✅ 闭包内用非空断言
+  fileIo.unlink(context.cacheDir)  // 错误：闭包内控制流重置，仍报 undefined
+  fileIo.unlink(context!.cacheDir) // 正确：闭包内用非空断言
 })
 ```
 
@@ -194,7 +194,7 @@ this.getUIContext().showAlertDialog({
 })
 ```
 
-### ⚠️ 易错：AlertDialog 组件 vs AlertDialog.show
+### 易错：AlertDialog 组件 vs AlertDialog.show
 ```typescript
 // 这是 ArkUI 的 AlertDialog 组件（构建器形式），不是废弃 API
 AlertDialog({ title: 'xxx' })  // 用于 CustomDialogController，不要改
@@ -297,7 +297,7 @@ const data = resourceManager.getMediaContent($r('app.media.icon').id)
 **废弃**：`tagSession.getTagInfo()`（实例方法）
 **替代**：`tag.getTagInfo(want)`（全局函数）
 
-### ⚠️ 这个 API 比较特殊
+### 这个 API 比较特殊
 实例方法废弃了，替代是全局函数但需要 `want` 参数。迁移时需确认 tagSession 实例的来源，是否能拿到 want。
 
 ### 实战数据
@@ -323,7 +323,7 @@ const fmt = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'long' })
 const str = fmt.format(date)
 ```
 
-### ⚠️ 易错：intl.DateTimeFormat vs Intl.DateTimeFormat
+### 易错：intl.DateTimeFormat vs Intl.DateTimeFormat
 小写 `intl` 是模块导入的，大写 `Intl` 是全局命名空间。编译器对小写 `intl.DateTimeFormat` 报废弃。
 
 ### 实战数据
