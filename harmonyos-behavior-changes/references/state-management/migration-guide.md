@@ -490,7 +490,7 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 - [ ] `@Prop` 改 `@Param` 的地方，注意复杂类型从深拷贝变引用传递
 - [ ] `@Observed` 类加了 `@Trace` 的属性是否完整（漏加会导致不触发 UI 更新）
 - [ ] **每个 `@State` 改 `@Local` 前，先检查该属性是否被父组件传值**——被传值的必须用 `@Param`（否则报错 10905324）
-- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton）——**必须**查 V2 替代组件（SegmentButtonV2）并替换，不允许保留 V1（否则报错 10905213）
+- [ ] **目标 V2 组件内是否用了含 @Link 的 V1 系统组件**（如 SegmentButton、TextReaderIcon、ProgressButton、SubHeader、ToolBar）——**必须**查 V2 替代组件并替换，**禁止把 struct 回退到 @Component**（否则报错 10905213，见第 5 节映射表）
 
 > V1/V2 同一组件内混用会编译报错，按错误提示逐个修正即可。父子组件分别用 V1/V2 是允许的。
 

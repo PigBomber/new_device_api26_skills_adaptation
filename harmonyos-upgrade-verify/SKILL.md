@@ -133,7 +133,7 @@ echo "工程代码 deprecated: $PROJECT（目标 0）"
 | **10605999** | undefined | Object is possibly 'undefined'（如 `getHostContext()` 返回值未判空） | 加判空 `if (ctx) { ... }` 或非空断言 `!` |
 | **10903329** | 资源错误 | 未知的资源名称 | 检查 `$r()` 引用路径 |
 | **10905324** | V2 状态管理 | @Local 属性被外部初始化 | 改用 @Param 或 @Param @Once（见 behavior-changes 迁移指南） |
-| **10905213** | V2/V1 混用 | V2 组件内用了含 @Link 的 V1 系统组件 | 查 V2 替代组件，或该 struct 保留 V1 |
+| **10905213** | V2/V1 混用 | V2 组件内用了含 @Link 的 V1 系统组件 | **必须查 V2 替代组件并替换**（见 behavior-changes 迁移指南第5节）。常见：SegmentButton→SegmentButtonV2、TextReaderIcon→TextReaderIconV2、ProgressButton→V2、ToolBar→V2、SubHeader→V2。**禁止把 struct 回退到 @Component** |
 | **00308018** | 版本号格式 | `api version parameter is illegal` | 配置改纯 SemVer `"26.0.0"` |
 | **00303168** | SDK 缺失 | `SDK component missing` | DEVECO_SDK_HOME 指向 `Contents/sdk`（非 `Contents/sdk/default`） |
 | **10505001** | 模块导入 | 找不到模块或接口 | 接口可能已废弃或改名，查 harmonyos-behavior-changes |
