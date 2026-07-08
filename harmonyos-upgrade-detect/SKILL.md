@@ -69,7 +69,7 @@ find . -name "module.json5" -exec grep -E "type|srcEntry" {} \;
 
 后续环节:
   2. 配置升级 → 用 harmonyos-upgrade-config
-  3. 废弃API迁移 → 用 deprecated-apis
+  3. 废弃API迁移 → 用 harmonyos-deprecated-apis
   4. 状态管理 V1→V2 → 用 harmonyos-behavior-changes
   5. 验证 → 用 harmonyos-upgrade-verify
 ```

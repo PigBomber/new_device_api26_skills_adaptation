@@ -1,5 +1,5 @@
 ---
-name: deprecated-apis
+name: harmonyos-deprecated-apis
 description: >
   HarmonyOS 项目升级中的废弃 API 检查与替换环节。当用户说「升级后哪些 API 废弃了」「deprecated 警告怎么修」「API 找不到了」「接口被移除了」「deprecated API」「@deprecated 标记」「旧接口替代方案」时触发。
   本 skill 提供检测项目中废弃 API 使用的方法、各版本主要废弃项速查、以及查找替代 API 的途径。与 harmonyos-behavior-changes（行为变化）互补：behavior-changes 管"API 还在但行为变了"，本 skill 管"API 没了要换替代"。

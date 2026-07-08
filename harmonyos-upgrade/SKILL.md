@@ -85,7 +85,7 @@ hvigorw --version || echo "错误：hvigorw 仍不可用，请用户提供 DevEc
 |------|--------|-------------|
 | 1. 检测 | 读 build-profile.json5 定基线、统计 V1 装饰器数量、判升级路径 | `harmonyos-upgrade-detect` |
 | 2. 配置 | 改 compatibleSdkVersion / targetSdkVersion → "26.0.0" | `harmonyos-upgrade-config` |
-| 3. 废弃API | clean 编译捕获 deprecated → 全部迁移到 0 | `deprecated-apis` |
+| 3. 废弃API | clean 编译捕获 deprecated → 全部迁移到 0 | `harmonyos-deprecated-apis` |
 | 4. 状态管理 | V1→V2 迁移（应用级状态→数据类→跨层级→组件级→监听） | `harmonyos-behavior-changes` |
 | 5. 验证 | hvigorw 编译、运行时无崩溃、deprecated=0 | `harmonyos-upgrade-verify` |
 
@@ -111,7 +111,7 @@ TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
 OH=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
 echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 ```
-查 `deprecated-apis` skill 的对照表和迁移档案，逐个迁移。**工具类的 getContext 也要改**。
+查 `harmonyos-deprecated-apis` skill 的对照表和迁移档案，逐个迁移。**工具类的 getContext 也要改**。
 
 ### 4. 状态管理 V1→V2（最容易遗漏的环节）
 
@@ -145,7 +145,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 |---------------------|------|
 | "帮我把这个项目升级到 26.0.0" | 创建 todo 清单，从步骤1开始 |
 | "compatibleSdkVersion 怎么改" | `harmonyos-upgrade-config` |
-| "deprecated 警告怎么修" | `deprecated-apis` |
+| "deprecated 警告怎么修" | `harmonyos-deprecated-apis` |
 | "@State 改 @Local" / "@Watch 改 @Monitor" | `harmonyos-behavior-changes` |
 | "编译报错" / "hvigorw ERROR" | `harmonyos-upgrade-verify` |
 
@@ -159,6 +159,6 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 
 - [harmonyos-upgrade-detect](../harmonyos-upgrade-detect/SKILL.md) — 版本检测与升级路径
 - [harmonyos-upgrade-config](../harmonyos-upgrade-config/SKILL.md) — 配置文件升级
-- [deprecated-apis](../deprecated-apis/SKILL.md) — 废弃 API 检查与替换
+- [harmonyos-deprecated-apis](../harmonyos-deprecated-apis/SKILL.md) — 废弃 API 检查与替换
 - [harmonyos-behavior-changes](../harmonyos-behavior-changes/SKILL.md) — 行为变化适配 + 状态管理迁移
 - [harmonyos-upgrade-verify](../harmonyos-upgrade-verify/SKILL.md) — 编译与多设备验证

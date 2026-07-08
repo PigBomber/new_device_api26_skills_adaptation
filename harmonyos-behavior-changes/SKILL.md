@@ -60,9 +60,9 @@ version: 2.0.0
 | "升级后行为变了啥" / "Toast 样式不对" | 块 B：看上方速查表 |
 | 不确定 | 先看块 B 速查表是否有命中；状态管理看 migration-guide.md |
 
-## 与 deprecated-apis skill 的关系
+## 与 harmonyos-deprecated-apis skill 的关系
 
-| | 本 skill | deprecated-apis |
+| | 本 skill | harmonyos-deprecated-apis |
 |---|---|---|
 | 管什么 | API **还在**，但行为变了；V1 装饰器迁 V2 | API **废弃了**，要换替代 |
 | 怎么发现 | 查行为变化速查表；V1 装饰器 grep 统计 | 编译 deprecated 告警 |
