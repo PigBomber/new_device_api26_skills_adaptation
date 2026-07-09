@@ -1,8 +1,6 @@
 # 状态管理 V1 → V2 迁移要点
 
 > 升级鸿蒙项目时，状态管理从 V1 迁移到 V2 的核心参考。
-> 详细机制差异见 [v1-v2-difference.md](v1-v2-difference.md)，
-> 完整概述见 [overview.md](overview.md)。
 
 ## 为什么要迁：V1 的限制
 
@@ -519,8 +517,5 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 
 ## 参考文档
 
-## 缺失文档（需手动补充）
-
-以下关键迁移场景文档未下载，如需详细 step-by-step 迁移示例请查华为官方：
-- [V1向V2迁移场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-state-management-v1-v2-migration-guide)
-- [V1和V2混用场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/v1v2-mixing)
+- [V1向V2迁移场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-state-management-v1-v2-migration-guide) — 华为官方迁移指南
+- [V1和V2混用场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/v1v2-mixing) — 华为官方混用说明
