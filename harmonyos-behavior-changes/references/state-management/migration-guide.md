@@ -320,7 +320,7 @@ PersistenceV2.connect(ThemeState, 'themeState', () => new ThemeState())!;
 - 要么新建一个公共模块（影响工程结构）
 - 要么放 entry 模块（其他模块不一定依赖 entry）
 
-**实战决策**：工程无公共模块时，新建一个公共 model 模块或放在 utils 里存放 @ObservedV2 数据类。**必须迁移，不能保留 V1 AppStorage**。
+**决策建议**：工程无公共模块时，新建一个公共 model 模块或放在 utils 里存放 @ObservedV2 数据类。**必须迁移，不能保留 V1 AppStorage**。
 
 **纯 V1 工程的正确迁移策略（一步到位，不留 V1 中间态）**：
 

@@ -1,7 +1,6 @@
-# 废弃 API 迁移档案（实战验证）
+# 废弃 API 迁移档案
 
-> 本档案记录在真实工程升级中迁过的每一个废弃 API，包含替代签名、代码示例、踩过的坑。
-> 来源：ComprehensiveNews（5.0.1(13)→26.0.0）+ ComprehensiveTool（6.0.0(20)→26.0.0）两个工程实战。
+> 本档案记录每个废弃 API 的替代签名、代码示例、踩过的坑。
 
 ---
 
@@ -33,10 +32,6 @@ function getWidth(uiContext: UIContext, v: number) {
 // 调用者：getWidth(this.getUIContext(), value)
 ```
 
-### 实战数据
-- ComprehensiveNews：px2vp 58 处 + vp2px 6 处
-- ComprehensiveTool：px2vp 4 处 + vp2px 10 处
-
 ---
 
 ## 2. showToast（since 18 废弃）
@@ -57,18 +52,6 @@ this.uiContext.getPromptAction().showToast({ message: '提示' })
 this.windowStageModel.windowStage?.getMainWindowSync().getUIContext().getPromptAction().showToast({ message: '提示' })
 ```
 
-### 实战数据
-- ComprehensiveNews：46 处
-- ComprehensiveTool：58 处
-
-### 易错：第三方库别名混淆
-```typescript
-// 这是第三方库别名，不是废弃 API，不能改！
-import { ToastDialog as promptAction } from '@hw-agconnect/ui-toast'
-promptAction.showToast({...})  // 实际是 ToastDialog.showToast
-```
-判断方法：看 import 来源，只有 `from '@kit.ArkUI'` 或 `from '@ohos.promptAction'` 才是废弃 API。
-
 ---
 
 ## 3. animateTo（since 18 废弃）
@@ -87,19 +70,6 @@ this.uiContext.animateTo({ duration: 300 }, () => { ... })
 
 // module_transition 场景（有 WindowUtils.window 静态变量）
 WindowUtils.window.getUIContext().animateTo({ duration: 300 }, () => { ... })
-```
-
-### 实战数据
-- ComprehensiveNews：41 处
-- ComprehensiveTool：3 处
-
-### 易错：链式调用 vs 全局函数
-```typescript
-// 这是链式调用，不是全局函数，不要改！
-someComponent.animateTo(...)
-
-// 这才是废弃的全局函数
-animateTo({ duration: 300 }, () => { ... })
 ```
 
 ---
@@ -154,10 +124,6 @@ someApi.then(() => {
 })
 ```
 
-### 实战数据
-- ComprehensiveNews：39 处（最初保留 25 处工具类，后纠正为全改）
-- ComprehensiveTool：53 处（全部改为参数化传递）
-
 ---
 
 ## 5. openCustomDialog / closeCustomDialog（since 18 废弃）
@@ -172,9 +138,6 @@ someApi.then(() => {
 this.getUIContext().getPromptAction().openCustomDialog(contentNode, options)
 this.getUIContext().getPromptAction().closeCustomDialog(contentNode)
 ```
-
-### 实战数据
-- ComprehensiveNews：6 处
 
 ---
 
@@ -203,10 +166,6 @@ AlertDialog({ title: 'xxx' })  // 用于 CustomDialogController，不要改
 AlertDialog.show({ title: 'xxx' })  // 要改成 showAlertDialog
 ```
 
-### 实战数据
-- ComprehensiveNews：1 处
-- ComprehensiveTool：1 处
-
 ---
 
 ## 7. MeasureText.measureTextSize（since 18 废弃）
@@ -219,9 +178,6 @@ AlertDialog.show({ title: 'xxx' })  // 要改成 showAlertDialog
 ```typescript
 this.getUIContext().getMeasureUtils().measureTextSize({ primaryKey, fontSize, maxWidth })
 ```
-
-### 实战数据
-- ComprehensiveNews：1 处
 
 ---
 
@@ -238,9 +194,6 @@ const data = await imagePacker.packing(pixelMap, { format: 'image/jpeg', quality
 // 改后
 const data = await imagePacker.packToData(pixelMap, { format: 'image/jpeg', quality: 90 })
 ```
-
-### 实战数据
-- ComprehensiveNews：2 处
 
 ---
 
@@ -268,9 +221,6 @@ audio.on('streamVolumeChange', StreamUsage.STREAM_USAGE_MUSIC, (event: StreamVol
 audio.off('streamVolumeChange')
 ```
 
-### 实战数据
-- ComprehensiveNews：3 处
-
 ---
 
 ## 10. resourceManager.getMediaContent（since 20 废弃）
@@ -287,9 +237,6 @@ const data = resourceManager.getMediaContent($r('app.media.icon'))
 const data = resourceManager.getMediaContent($r('app.media.icon').id)
 ```
 
-### 实战数据
-- ComprehensiveNews：1 处
-
 ---
 
 ## 11. getTagInfo（NFC，since 9 废弃）
@@ -299,9 +246,6 @@ const data = resourceManager.getMediaContent($r('app.media.icon').id)
 
 ### 这个 API 比较特殊
 实例方法废弃了，替代是全局函数但需要 `want` 参数。迁移时需确认 tagSession 实例的来源，是否能拿到 want。
-
-### 实战数据
-- ComprehensiveTool：4 处（MifareClassicReader/Iso7816/FeliCa/Nfc）
 
 ---
 
@@ -325,9 +269,6 @@ const str = fmt.format(date)
 
 ### 易错：intl.DateTimeFormat vs Intl.DateTimeFormat
 小写 `intl` 是模块导入的，大写 `Intl` 是全局命名空间。编译器对小写 `intl.DateTimeFormat` 报废弃。
-
-### 实战数据
-- ComprehensiveTool：4 处（DateTimeFormat 2 + format 2）
 
 ---
 
@@ -356,10 +297,6 @@ resourceManager.getStringSync(res.id)
 resourceManager.getStringSync(res!.id)
 ```
 
-### 实战数据
-- ComprehensiveTool：1 处
-- ibest-ui：getStringSync 4 处 + getMediaContentBase64Sync 2 处
-
 ---
 
 ## 14. @ohos.promptAction 模块路径（since 20 废弃）
@@ -378,43 +315,6 @@ import { promptAction } from '@ohos.promptAction'
 import { promptAction, LevelMode } from '@kit.ArkUI'
 ```
 
-### 实战数据
-- ComprehensiveTool：1 处
-
----
-
-## 迁移统计汇总
-
-> 来源：5 个工程实战验证
-> - ComprehensiveNews（5.0.1(13)→26.0.0，1080 文件）
-> - ComprehensiveTool（6.0.0(20)→26.0.0，1146 文件）
-> - ComprehensiveMall（5.0.4(16)→26.0.0，483 文件）
-> - Recipes（5.0.4(16)→26.0.0，262 文件）
-> - HMOSWorld（5.0.0(12)→26.0.0，420 文件）
-
-| API | since | News | Tool | Mall | Recipes | HMOS | 总计 |
-|-----|-------|------|------|------|---------|------|------|
-| showToast | 18 | 46 | 58 | 24 | 31 | 15 | 174 |
-| getContext | 18 | 39 | 53 | 20 | 18 | 60 | 190 |
-| px2vp | 18 | 58 | 4 | 22 | 2 | 9 | 95 |
-| animateTo | 18 | 41 | 3 | 13 | 0 | 18 | 75 |
-| vp2px | 18 | 6 | 10 | 6 | 0 | 8 | 30 |
-| router 路由类 | 18 | 0 | 0 | 0 | 0 | 22 | 22 |
-| openCustomDialog/closeCustomDialog | 18 | 6 | 0 | 3 | 3 | 0 | 12 |
-| AlertDialog.show/showDialog | 18/26 | 1 | 1 | 0 | 2 | 2 | 6 |
-| matchMediaSync | 18 | 0 | 0 | 0 | 0 | 3 | 3 |
-| measureTextSize | 18 | 1 | 0 | 0 | 0 | 0 | 1 |
-| packing | 13 | 2 | 0 | 0 | 0 | 0 | 2 |
-| getVolumeSync/volumeChange | 20 | 3 | 0 | 0 | 0 | 0 | 3 |
-| getMediaContent/getMediaContentSync | 20 | 1 | 0 | 1 | 0 | 1 | 3 |
-| getTagInfo | 9 | 0 | 4 | 0 | 0 | 0 | 4 |
-| DateTimeFormat | 20 | 0 | 2 | 0 | 0 | 0 | 2 |
-| getStringSync/getStringValue | 9/20 | 0 | 1 | 0 | 0 | 3 | 4 |
-| @ohos.promptAction 路径 | 20 | 0 | 1 | 0 | 0 | 0 | 1 |
-| **合计** | | **204** | **137** | **86** | **57** | **144** | **628** |
-
-**规律观察**：showToast + getContext + px2vp 三者占总量的 **73%**（459/628）。路由类 API（router.xxx）在老工程（API 12 基线）出现，是 HMOSWorld 特有的大类。
-
 ---
 
 ## 15. getMediaContentSync（since 20 废弃）
@@ -430,9 +330,6 @@ const data = context.resourceManager.getMediaContentSync(image)  // image 是 Re
 // 改后：用 .id 取 resId
 const data = context.resourceManager.getMediaContentSync((image as Resource).id)
 ```
-
-### 实战数据
-- ComprehensiveMall：1 处
 
 ---
 
@@ -461,9 +358,6 @@ this.getUIContext().getRouter().getParams()
 // 工具类：用 ContextManager.getUIContext() 或加 uiContext 参数
 ```
 
-### 实战数据
-- HMOSWorld：22 处（replaceUrl 6 + getParams 5 + back 4 + replaceNamedRoute 4 + pushNamedRoute 2 + pushUrl 1）
-
 ---
 
 ## 17. matchMediaSync（since 18 废弃）
@@ -481,9 +375,6 @@ const listener = mediaquery.matchMediaSync('(dark-mode: true)')
 const listener = this.getUIContext().getMediaQuery().matchMediaSync('(dark-mode: true)')
 ```
 
-### 实战数据
-- HMOSWorld：3 处
-
 ---
 
 ## 18. getStringValue（since 9 废弃）
@@ -499,9 +390,6 @@ const str = resourceManager.getStringValue(resource)
 // 改后
 const str = resourceManager.getStringValue(resource.id)
 ```
-
-### 实战数据
-- HMOSWorld：1 处
 
 ---
 
@@ -536,7 +424,7 @@ if (typeof value == 'string') {
 
 迁移工具类的 `getContext()` 有两种模式，按场景选择：
 
-### 模式 A：参数化传递（推荐，ComprehensiveNews/Tool 用）
+### 模式 A：参数化传递（推荐）
 给函数加 `context: Context` 参数，调用者传入。
 
 ```typescript
@@ -548,7 +436,7 @@ FileUtils.readFile(this.getUIContext().getHostContext()!)
 ```
 **适用**：调用者少、调用链清晰的场景。
 
-### 模式 B：静态 setContext 持有者（ComprehensiveMall 用）
+### 模式 B：静态 setContext 持有者
 工具类加静态 `setContext()` 方法，在 EntryAbility.onCreate 注入。
 
 ```typescript
