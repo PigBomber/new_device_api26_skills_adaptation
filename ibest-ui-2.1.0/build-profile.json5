@@ -1,0 +1,84 @@
+{
+  "app": {
+    "signingConfigs": [
+      //			{
+      //				"name": "default",
+      //				"type": "HarmonyOS",
+      //				"material": {
+      //					"storePassword": "0000001DA1DDFADC7FCD4003DD09F84F49A1AC838DEECB3A787AB9D759D24CC841F0A92BA5ED6777CEBAE2EAE6",
+      //					"certpath": "/Users/damengbuxing/Desktop/IBest-UI应用文件/ibest_ui_release.cer",
+      //					"keyAlias": "ibest_ui_p12",
+      //					"keyPassword": "0000001D0AC1868A4F028144400BB55194A7B0887F04949FFF9B52AC83A798463AC8C0B8E4FDDC752A8F4A7BED",
+      //					"profile": "/Users/damengbuxing/Desktop/IBest-UI应用文件/ibest_ui_profileRelease.p7b",
+      //					"signAlg": "SHA256withECDSA",
+      //					"storeFile": "/Users/damengbuxing/Desktop/IBest-UI应用文件/ibest_ui_p12.p12"
+      //				}
+      //			},
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/zzz/.ohos/config/default_ibest-ui-2.1.0_TzMGfWKDNQ9zWesroQlOU76dUTFEtwxe1IELvTAtJEo=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B242311E4724C76C5A64BA9654A6AD334118E18518E870A85DA569C47C940F29D5944C51BC863D2",
+          "profile": "/Users/zzz/.ohos/config/default_ibest-ui-2.1.0_TzMGfWKDNQ9zWesroQlOU76dUTFEtwxe1IELvTAtJEo=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/zzz/.ohos/config/default_ibest-ui-2.1.0_TzMGfWKDNQ9zWesroQlOU76dUTFEtwxe1IELvTAtJEo=.p12",
+          "storePassword": "0000001B4742DD9F89E400E947B39C5E7D653B9F1F21C8DD161EAC163EBE068137110CA8C54CB37A89B817"
+        }
+      }
+      //			{
+      //				"name": "default",
+      //				"type": "HarmonyOS",
+      //				"material": {
+      //					"certpath": "C:\\Users\\Administrator\\.ohos\\config\\default_ibest-ui_xXJLqStmQDl9P_6bRKkoHbj-HILGKBG46C6yaRfgFhQ=.cer",
+      //					"keyAlias": "debugKey",
+      //					"keyPassword": "0000001B5AEF4C7604B9034FF0265111E6919C3B1BB9CE9513381588E542A6F4F2512BA6387EAB99E805B4",
+      //					"profile": "C:\\Users\\Administrator\\.ohos\\config\\default_ibest-ui_xXJLqStmQDl9P_6bRKkoHbj-HILGKBG46C6yaRfgFhQ=.p7b",
+      //					"signAlg": "SHA256withECDSA",
+      //					"storeFile": "C:\\Users\\Administrator\\.ohos\\config\\default_ibest-ui_xXJLqStmQDl9P_6bRKkoHbj-HILGKBG46C6yaRfgFhQ=.p12",
+      //					"storePassword": "0000001BB96A19F44A5AE323929A73BCA1445BBE7C409DFBAFD91F81544C70357DF24E1527006B88470E9B"
+      //				}
+      //			}
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "26.0.0",
+        "runtimeOS": "HarmonyOS",
+        //				"buildOption": {
+        //					"strictMode": {
+        //						"useNormalizedOHMUrl": true
+        //					}
+        //				}
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "library",
+      "srcPath": "./library"
+    }
+  ]
+}

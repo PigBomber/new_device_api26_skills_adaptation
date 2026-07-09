@@ -131,7 +131,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 - 全量迁移，不留 V1 残留（不用双写桥等中间态）
 - 组件级按依赖关系排序，叶子组件先迁
 
-详见 `harmonyos-behavior-changes` 的 `state-management/migration-guide.md`。
+详见 `harmonyos-behavior-changes` 的 `references/migration-guide.md`。
 
 ### 5. 行为变化适配（grep 命中驱动，只改命中的）
 
