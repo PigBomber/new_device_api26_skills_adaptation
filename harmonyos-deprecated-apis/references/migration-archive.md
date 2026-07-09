@@ -347,13 +347,13 @@ const str = resourceManager.getStringSync($r('app.string.xxx').id)
 
 ### 易错：Resource 可选类型 .id 访问报 undefined
 
-如果变量是可选类型（`Resource?` 或 `Resource | undefined`），直接 `.id` 访问会报错 `Object is possibly 'undefined'`（错误码 10605999）。改法：
+如果变量是可选类型（`Resource?` 或 `Resource | undefined`），改成 `.id` 后会报错 `Object is possibly 'undefined'`（错误码 10605999）。改法：
 
 ```typescript
-// 报错：url 是 Resource? 类型，url.id 可能 undefined
-this.resourceManager.getMediaContentBase64Sync(url.id)
+// 报错：res 是 Resource? 类型，res.id 可能 undefined
+resourceManager.getStringSync(res.id)
 // 正确：加非空断言
-this.resourceManager.getMediaContentBase64Sync(url!.id)
+resourceManager.getStringSync(res!.id)
 ```
 
 ### 实战数据
@@ -510,27 +510,25 @@ const str = resourceManager.getStringValue(resource.id)
 迁移废弃 API 时，如果改动涉及 `if/else` 分支，**不要把无条件的 `else` 改成带条件的 `else if`**——会破坏兜底赋值，导致变量在某个分支未赋值，编译报 `Variable 'xxx' is used before being assigned`（错误码 10605999）。
 
 ```typescript
-// 原代码：else 是兜底，保证 imgModel 一定被赋值
-let imgModel: PixelMap | ImageBitmap
-if (typeof url == 'string') {
-    imgModel = new ImageBitmap(url)
+// 原代码：else 是兜底，保证变量一定被赋值
+let result: SomeType
+if (typeof value == 'string') {
+    result = processString(value)
 } else {  // Resource 类型兜底
-    imgModel = await base64ToPixelMap(resourceManager.getMediaContentBase64Sync(url))
+    result = processResource(resourceManager.getMediaContent(value))
 }
 
-// 错误改法：为了加 .id 判空把 else 改成 else if(url)
-// 当 url 是 falsy 的 Resource 时，imgModel 没赋值 → 编译报错
-} else if (url) {
-    imgModel = await base64ToPixelMap(resourceManager.getMediaContentBase64Sync(url.id))
+// 错误改法：为了加 .id 判空把 else 改成 else if(value)
+// 当 value 是 falsy 时，result 没赋值 → 编译报错
+} else if (value) {
+    result = processResource(resourceManager.getMediaContent(value.id))
 }
 
 // 正确改法：保持 else 兜底，在内部用非空断言
 } else {
-    imgModel = await base64ToPixelMap(resourceManager.getMediaContentBase64Sync(url!.id))
+    result = processResource(resourceManager.getMediaContent(value!.id))
 }
 ```
-
-**来源**：ibest-ui 实战，canvasDrawer 组件迁移 getMediaContentBase64Sync 时踩坑。
 
 ---
 
