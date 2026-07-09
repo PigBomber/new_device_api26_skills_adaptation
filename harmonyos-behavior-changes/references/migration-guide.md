@@ -140,6 +140,80 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
 >
 > **判断方法**：遇到 10905213 报错，先查上方映射表。在表里 → 必须替换成 V2；不在表里 → 查本白名单，确认无 V2 替代后该 struct 保留 @Component，并在迁移记录里标注「无 V2 替代」。
 
+## V2 迁移后的运行时陷阱（来自华为官方 FAQ）
+
+迁完 V2 后，以下行为和 V1 不同，容易导致 UI 不刷新或冗余刷新。迁移时需逐项排查。
+
+### 1. V2 普通类不创建代理对象
+
+V1 的 `@Observed` 会给类实例包装一层 Proxy 代理。V2 的 `@ObservedV2` **不会创建代理对象**，而是靠 `@Trace` 属性级追踪。这意味着：
+- V1 可用 `UIUtils.getTarget(obj) === obj` 判断是否被代理（false = 已代理）。**V2 普通类此方法无效**（恒为 true，因为没代理）
+- V2 判断是否可观察：检查属性是否被 `@Trace` 装饰，或看 Profiler 的 ArkUI State 泳道
+- V2 的 Array/Map/Set **仍会包装代理**（和 V1 一致），`getTarget` 对这些类型仍然有效
+
+### 2. V2 复杂类型常量重复赋值触发不必要刷新
+
+V2 中 `@Local`/`@Trace` 装饰的 Date/Map/Set/Array 会被包装代理。把**同一个原始对象**重复赋值给状态变量时，由于代理对象 !== 原始对象，框架判断为新值，触发不必要的刷新。
+
+```typescript
+@ComponentV2
+struct Index {
+  list: string[][] = [['a'], ['b'], ['c']];
+  @Local data: string[] = this.list[0];  // 被包装成代理
+  build() {
+    Button('change').onClick(() => {
+      // list[0] 是原始 Array，data 是代理 Array，两者 !== → 触发刷新
+      this.data = this.list[0];
+    })
+  }
+}
+```
+**解决**：赋值前用 `UIUtils.getTarget()` 获取原始对象对比，相同则不赋值。
+
+### 3. 构造函数中通过 this 修改属性无法观察
+
+V1 和 V2 都有此问题。在类的构造函数中，实例尚未被状态管理框架包装（V1）或注册追踪（V2），此时通过 `this` 修改属性，后续无法被观察到。
+
+```typescript
+@ObservedV2
+class Model {
+  @Trace isSuccess: boolean = false;
+  callback: () => void
+  constructor() {
+    // 错误：此时实例尚未被框架追踪，this.isSuccess 的修改不会被观察到
+    this.callback = () => { this.isSuccess = true; }
+  }
+}
+```
+**解决**：将状态变量的修改放在类的普通方法中，在组件使用该实例后再触发。
+
+### 4. ForEach + 对象数组：数据源替换后断链
+
+ForEach 根据_key_判断是否重建子组件。如果替换了数组中的对象实例但 _key_ 没变，ForEach 不会重建子组件，子组件里的 `@ObjectLink`（V1）或 `@Param`（V2）仍指向旧实例，导致数据源和同步对象断链——改新实例的属性，UI 不刷新。
+
+```typescript
+// 错误：替换了 infos[0] 的实例，但 ForEach key 没变 → 子组件不重建 → 断链
+this.infos[0] = new Info();
+// 再改属性，子组件 UI 不刷新
+this.infos[0].value += '1';
+```
+**解决**：确保 ForEach 的 key 生成函数在数据变化时返回不同的值，触发子组件重建。
+
+### 5. 同步回调中修改状态变量可能被忽略
+
+在组件的同步回调（如 `onComplete`、`onSizeChange`）中直接修改状态变量，如果此时组件正在渲染（build 进行中），框架会打印 error 日志并**忽略这次状态变更**，UI 不刷新。
+
+```typescript
+// 错误：onComplete 是同步回调，此时 build 可能正在进行
+.onComplete(() => { this.widthValue = 200; })
+// 日志：State variable 'widthValue' has changed during render!
+```
+**解决**：用 `setTimeout` 将同步回调中的状态修改转为异步执行。
+
+### 6. 状态变量关联组件过多导致性能下降
+
+建议每个状态变量关联的组件数少于 20 个。如果一个状态变量绑定在多个同级子组件上，修改时所有关联组件都会刷新。**解决**：将相同的属性绑定提到公共父组件上，减少关联的组件数。
+
 ### SegmentButton → SegmentButtonV2 迁移（API 经 SDK d.ets 核实）
 
 V1 `SegmentButton` 是 `@Component`，内部用 `@Link` 双向绑定 `selectedIndexes`，是 V2 化最常见的阻塞点。V2 系列**从 API 18 起提供**，三种样式：
