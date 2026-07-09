@@ -130,7 +130,7 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
    - **在映射表里（有 V2 替代）**→ 必须替换。ArkUI 高级组件仍从 `@kit.ArkUI` 导入；TextReaderIcon 从 `@kit.SpeechKit` 导入 `TextReaderIconV2` + `UpReadState`
    - **不在映射表里（查下方白名单确认无 V2 替代）**→ 该 struct 保留 @Component，在迁移记录里标注「无 V2 替代，struct 保留 V1」
 
-> **TextReaderIcon → TextReaderIconV2 关键差异**（来自华为官方文档）：
+> **TextReaderIcon → TextReaderIconV2 关键差异**：
 > - 导入：`import { TextReaderIconV2, UpReadState } from '@kit.SpeechKit'`
 > - V2 用 `@Param readState` + `@Event upReadState`（回调函数，类型 `UpReadState = (readState: ReadStateCode) => void`），替代 V1 的内部状态绑定
 > - 配合 `TextReader.init()` / `TextReader.start()` 使用（这两个是 kit 的全局 API，V1/V2 通用，不用改）
@@ -140,7 +140,7 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
 >
 > **判断方法**：遇到 10905213 报错，先查上方映射表。在表里 → 必须替换成 V2；不在表里 → 查本白名单，确认无 V2 替代后该 struct 保留 @Component，并在迁移记录里标注「无 V2 替代」。
 
-## V2 迁移后的运行时陷阱（来自华为官方 FAQ）
+## V2 迁移后的运行时陷阱
 
 迁完 V2 后，以下行为和 V1 不同，容易导致 UI 不刷新或冗余刷新。迁移时需逐项排查。
 
@@ -214,7 +214,7 @@ this.infos[0].value += '1';
 
 建议每个状态变量关联的组件数少于 20 个。如果一个状态变量绑定在多个同级子组件上，修改时所有关联组件都会刷新。**解决**：将相同的属性绑定提到公共父组件上，减少关联的组件数。
 
-### SegmentButton → SegmentButtonV2 迁移（API 经 SDK d.ets 核实）
+### SegmentButton → SegmentButtonV2 迁移
 
 V1 `SegmentButton` 是 `@Component`，内部用 `@Link` 双向绑定 `selectedIndexes`，是 V2 化最常见的阻塞点。V2 系列**从 API 18 起提供**，三种样式：
 
