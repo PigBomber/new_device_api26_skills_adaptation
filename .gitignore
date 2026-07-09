@@ -1,4 +1,4 @@
-# 实战测试工程（非 skill 内容）
+# 测试工程（非 skill 内容）
 ComprehensiveMall1.0.4/
 ComprehensiveNews1.0.2/
 ComprehensiveTool1.0.8/
@@ -6,6 +6,8 @@ Recipes1.0.5/
 hmosworld-master-HMOSWorld/
 FoldedHover-master/
 TelevisionNews/
+ibest-ui-2.1.0/
+harmony-utils-master/
 
 # 原始文档（体积大，非 skill）
 doc/
