@@ -141,6 +141,11 @@ function myUtil(uiContext: UIContext, value: number) {
 | `i18n.language` / `i18n.Locale` | `i18n.System.getDisplayLanguage` / `getSystemLanguage` | 9 | 语言相关 |
 | `tagSession.getTagInfo()` | `tag.getTagInfo(want)` | 9 | NFC 标签信息（实例方法废弃） |
 | `@ohos.promptAction` 模块路径 | `@kit.ArkUI` | 20 | 旧模块路径废弃 |
+| 全局 `lpx2px(x)` / `fp2px(x)` | `uiContext.lpx2px(x)` / `uiContext.fp2px(x)` | 18 | 同 px2vp/vp2px，全局→UIContext |
+| `resourceManager.getPluralStringValueSync/Sync/ByName` | `getIntPluralStringValueSync` / `getIntPluralStringByNameSync` | 18 | **整个方法废弃**（不止 Resource 重载） |
+| `picker.PhotoViewPicker` / `PhotoSelectOptions` | `photoAccessHelper.PhotoViewPicker` / `PhotoSelectOptions` | 20 | 类从 `@ohos.file.picker` 迁到 `@kit.MediaLibraryKit` |
+| Web `.selectionMenuOptions()` | `.editMenuOptions()` | 20 | 参数类型也变了 |
+| `TextDecoder.decodeWithStream()` | `decodeToString()` | 12 | 直接改名 |
 
 ### 迁移易错点
 
