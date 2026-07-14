@@ -1,25 +1,80 @@
 ---
 name: harmonyos-upgrade-verify
-description: >
-  HarmonyOS 项目升级的编译验证与多设备检查环节。当用户说「升级后编译报错」「hvigorw ERROR」「编译失败怎么修」「升级完要验证什么」「多设备测试」「错误码 xxx 什么意思」时触发。
-  本 skill 负责 hvigorw 编译校验、错误码分类修复、多设备/UX 验证清单。属于升级流程的步骤6验证环节，通常由 harmonyos-upgrade 总 skill 路由调用。
-version: 1.0.0
+description: 鸿蒙项目升级的编译验证与多设备检查环节。当开发者提到「升级后编译报错」「hvigorw ERROR」「编译失败怎么修」「升级完要验证什么」「多设备测试」「错误码 xxx 什么意思」「hvigorw not found」「SDK component missing」「deprecated 告警怎么统计」时触发。负责 hvigorw 编译环境配置、编译校验、错误码分类修复、deprecated 告警统计、多设备/UX 验证清单。属于升级流程的步骤6验证环节。不包含版本检测、配置修改、废弃API迁移、行为变化适配。
 ---
+
+## Agent Interface
+
+```yaml
+symptom_keywords:
+  - hvigorw not found / not in PATH
+  - SDK component missing
+  - Invalid value of DEVECO_SDK_HOME
+  - compile ERROR after upgrade
+  - deprecated warnings count not reaching zero
+  - Cannot find module 10505001 batch errors (single-module compile false errors)
+  - Object is possibly undefined 10605999
+  - V2 component cannot be used with @Link 10905213
+  - @Local property cannot be initialized 10905324
+  - multi-module project compile errors
+
+hard_constraints:
+  - Compiling is a hard dependency of the upgrade flow — deprecated API detection relies on compiler warnings, final verification relies on compile results; never skip compilation or abort with "no build tool found"
+  - DevEco Studio includes hvigorw — if DevEco is installed, hvigorw exists; configure environment variables instead of asking user to open DevEco Studio
+  - DEVECO_SDK_HOME must point to Contents/sdk (macOS) or sdk (Win/Linux) — never to Contents/sdk/default; let hvigor find the default subdirectory itself
+  - Multi-module projects (with file: HAR dependencies) must use full-project compile (no --mode module) — single-module compile produces batch false errors (10505001/10905204/10903329)
+  - deprecated warning statistics must be based on the latest clean compile log — never reuse old log files; never use paste to mix lines from different log files
+  - ANSI color codes must be stripped with sed before processing build logs
+
+diagnostic_checklist:
+  - Is hvigorw in PATH or has DevEco Studio been located via the detection script?
+  - Is DEVECO_SDK_HOME pointing to Contents/sdk (not Contents/sdk/default)?
+  - Is the project multi-module with file: HAR dependencies? (If so, use full-project compile, not --mode module)
+  - Has ohpm install been run at project root and every module with oh-package.json5?
+  - Was hvigorw clean run before assembleHap to get full deprecated warnings?
+  - Are deprecated warnings counted correctly (TOTAL minus oh_modules)?
+```
 
 # 编译验证与多设备检查
 
-## 这个 Skill 做什么
+## 适配领域
 
-升级改动完成后：
-1. 跑 hvigorw 编译，捕获并分类错误
-2. 按错误码指引修复
-3. 多设备/UX 验证清单逐项确认
+本 skill 覆盖升级流程的最后一步：跑 hvigorw 编译捕获并分类错误、按错误码指引修复、多设备/UX 验证清单逐项确认。
 
-## 编译环境配置（关键，必须完成）
+**不覆盖**：版本检测（见 `harmonyos-upgrade-detect`）；配置修改（见 `harmonyos-upgrade-config`）；废弃 API 迁移（见 `harmonyos-deprecated-apis`）；行为变化适配（见 `harmonyos-behavior-changes`）。
 
-**编译是升级流程的硬依赖**：步骤3废弃API检测靠编译告警，步骤6验证靠编译结果。**装了 DevEco Studio 就一定有 hvigorw**——配好环境变量即可。不允许以"找不到 hvigorw"为由跳过编译或中止流程。
+---
 
-### hvigorw 定位与配置（多平台 robust 探测）
+## 错误码分类矩阵
+
+| 错误码 | 类别 | 原因 | 修复 |
+|--------|------|------|------|
+| **10605080** | ArkTS 语法 | `for..in` / `any` / 类型断言等不支持 | 改用 `Object.keys().forEach()` 或 `for..of`；声明明确类型 |
+| **10605029** | ArkTS 类型 | 索引访问 `obj[key]` 不支持 | 用 `Record<string, T>` 类型声明 |
+| **10605001** | 类型错误 | 对象类型赋值不匹配 / 属性不存在 | 检查类型声明；如 `UIContext.getContext` 不存在（应用 `getContext(this)`） |
+| **10605008** | any/unknown | 用了 `any` 或 `unknown` 类型 | 声明明确类型（如 `common.UIAbilityContext`） |
+| **10605999** | undefined | `Object is possibly 'undefined'`（如 `getHostContext()` 返回值未判空，尤其作实参传递时） | 加判空 `if (ctx) { ... }` 或非空断言 `!`（组件生命周期内必然有值） |
+| **10903329** | 资源错误 | 未知的资源名称 | 检查 `$r()` 引用路径；**多模块工程若批量出现 + 伴随 10505001/10905204，是单模块编译假错误** |
+| **10905204** | UI 组件语法 | `'XxxPage();' does not meet UI component syntax` | 通常被 `Cannot find module` 连带触发——兄弟模块未解析导致组件类型未知。先解决模块依赖（全工程编译） |
+| **10905324** | V2 状态管理 | @Local 属性被外部初始化 | 改用 @Param 或 @Param @Once（见 behavior-changes 迁移指南） |
+| **10905213** | V2/V1 混用 | V2 组件内用了含 @Link 的 V1 系统组件 | 查 behavior-changes 迁移指南映射表：有 V2 替代的必须替换；无 V2 替代的该 struct 保留 @Component |
+| **00308018** | 版本号格式 | `api version parameter is illegal` | 配置改纯 SemVer `"26.0.0"` |
+| **00303168** | SDK 缺失 | `SDK component missing` | DEVECO_SDK_HOME 指向 `Contents/sdk`（非 `Contents/sdk/default`） |
+| **10505001** | 模块导入 | 找不到模块或接口 | 接口可能已废弃或改名，查 harmonyos-behavior-changes |
+| **10200006** | Worker 序列化 | 数据无法序列化 | 用可序列化数据类型 |
+| **10200020** | Method 不可调用 | async 方法无法被 callGlobalCallObjectMethod 调用 | 改用同步方法或调整 Worker 通信 |
+
+> 错误码 10505001（模块/接口找不到）通常意味着 API 已废弃或改名，需查 `harmonyos-behavior-changes` skill 确认。
+
+---
+
+## 适配流程
+
+### 新适配
+
+**第 1 步：配置 hvigorw 编译环境**
+
+**编译是升级流程的硬依赖**——步骤3废弃API检测靠编译告警，步骤6验证靠编译结果。**装了 DevEco Studio 就一定有 hvigorw**，配好环境变量即可。不允许以"找不到 hvigorw"为由跳过编译或中止流程。
 
 hvigorw 不在系统 PATH 里，编译前必须定位 DevEco Studio 安装路径并配置环境变量。**不要写死路径**——安装位置因平台/用户/版本而异，用以下脚本动态探测：
 
@@ -63,18 +118,72 @@ hvigorw --version
 
 > **关键注意**：`DEVECO_SDK_HOME` 必须指向 `Contents/sdk`（macOS）或 `sdk`（Win/Linux），让 hvigor 自己找 default 子目录——**不要**指向 `Contents/sdk/default`。
 
-### 如果自动探测失败
-
-向用户索取路径后，手动配置：
+如果自动探测失败，向用户索取路径后手动配置：
 ```bash
-# 用户提供 DevEco Studio 安装路径后
 export DEVECO_SDK_HOME="<路径>/Contents/sdk"   # macOS；Win/Linux 去掉 Contents/
 export PATH="<路径>/Contents/tools/hvigor/bin:$PATH"
 export PATH="<路径>/Contents/tools/ohpm/bin:$PATH"
 hvigorw --version  # 确认
 ```
 
-**常见环境报错与修复：**
+确认 SDK 版本：
+```bash
+grep apiVersion "$DEVECO_SDK_HOME/default/sdk-pkg.json"
+# 应输出 "apiVersion": "26" 表示装了 API 26 SDK
+```
+
+**第 2 步：编译**
+
+```bash
+cd <工程根目录>
+hvigorw clean                          # 清缓存（增量编译可能不报 deprecated，要 clean 才全量）
+hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | tail -40
+```
+
+**模块名注意**：`-p module=` 后面跟的是模块名，不一定是 `entry`。从工程 `build-profile.json5` 的 `modules[].name` 读取。
+
+**多模块工程必须全工程编译**：含多个 HAR 本地依赖（`entry/oh-package.json5` 里有 `"xxx": "file:../feature/xxx"`）的工程，**不能用 `--mode module -p module=entry` 单模块编译**——兄弟模块不会被解析，会报大量假错误。正确做法：
+
+```bash
+# 编译前先 ohpm install（工程根 + 每个含 oh-package.json5 的模块），否则 file: 依赖链接不上
+ohpm install   # 工程根
+# 多模块工程：全工程编译（不要 --mode module）
+hvigorw assembleHap --no-daemon
+```
+
+判别假错误的方法：如果 10505001/10905204/10903329 成批出现且都指向 `entry` 模块、引用的模块名是兄弟 HAR（book_home/common 等），就是单模块编译的假错误，改全工程编译即消失。
+
+**第 3 步：统计 deprecated 告警**
+
+```bash
+# clean 后全量编译才能看到完整告警（增量编译用缓存会跳过）
+hvigorw clean --no-daemon
+hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
+
+# 正确：先存日志到文件，再分步统计
+TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
+OH_MODULES=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
+PROJECT=$((TOTAL - OH_MODULES))
+echo "工程代码 deprecated: $PROJECT（目标 0）"
+```
+
+注意事项：
+- 告警带 ANSI 颜色码，必须先 `sed 's/\x1b\[[0-9;]*m//g'` 去色再处理
+- **不要用 paste 命令混合不同日志文件的行**——会把旧日志的 deprecated 行和新日志的 File 行错位拼接，造成假告警
+- deprecated 告警是两行格式：`File: xxx.ets:行:列` + `'API名' has been deprecated.`，统计时用 `grep -B1` 配对
+- 每次统计必须基于**当前最新一次** clean 编译的日志，不要复用旧日志文件
+
+**第 4 步：修复循环**
+
+```
+编译报错 → 看错误码 → 查错误码分类矩阵定修复方向 → 改代码 → 重新编译 → 直到 0 ERROR
+```
+
+---
+
+### 问题定位
+
+**环境报错：**
 
 | 报错 | 原因 | 修复 |
 |-----|------|------|
@@ -84,112 +193,114 @@ hvigorw --version  # 确认
 | `compatibleSdkVersion` 对应的 SDK 未安装 | 装的 SDK 版本低于工程配置 | 在 DevEco SDK Manager 下载对应版本 |
 | Win 下 `hvigorw` 无扩展名报错 | Git Bash 不认 .bat | 用 `hvigorw.bat` 或在 cmd/PowerShell 执行 |
 
-**确认 SDK 版本：**
+**编译报错**：查上方「错误码分类矩阵」。
+
+---
+
+## 关键 API
+
+### hvigorw
+
+**用途**：鸿蒙工程的编译构建工具，废弃 API 检测和最终验证的唯一可靠依据。
+
+**注意**：不在系统 PATH，需通过 DevEco Studio 安装路径定位；多模块工程不能单模块编译。
+
+### DEVECO_SDK_HOME
+
+**用途**：指向 DevEco Studio SDK 目录的环境变量。
+
+**注意**：必须指向 `Contents/sdk`（macOS）或 `sdk`（Win/Linux），让 hvigor 自己找 default 子目录——不要指向 `Contents/sdk/default`。
+
+---
+
+## 代码模式
+
+### 模式 1：环境探测与配置
+
 ```bash
-grep apiVersion "$DEVECO_SDK_HOME/default/sdk-pkg.json"
-# 应输出 "apiVersion": "26" 表示装了 API 26 SDK
+# ✅ 多平台动态探测 DevEco Studio，不写死路径
+DEVECO_HOME=$(find /Applications ~/Applications -maxdepth 2 -name "DevEco*Studio*" -type d 2>/dev/null | head -1)
+export DEVECO_SDK_HOME="$DEVECO_HOME/Contents/sdk"  # ✅ 指向 sdk，不是 sdk/default
+export PATH="$DEVECO_HOME/Contents/tools/hvigor/bin:$PATH"
+hvigorw --version  # 验证
 ```
 
-## 编译命令
+### 模式 2：多模块工程全工程编译
 
 ```bash
-cd <工程根目录>
-hvigorw clean                          # 清缓存（增量编译可能不报 deprecated，要 clean 才全量）
-hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | tail -40
-```
-
-**模块名注意**：`-p module=` 后面跟的是模块名，不一定是 `entry`。从工程 `build-profile.json5` 的 `modules[].name` 读取（如本工程是 `phone`）。
-
-**多模块工程必须全工程编译**：含多个 HAR 本地依赖（`entry/oh-package.json5` 里有 `"xxx": "file:../feature/xxx"`）的工程，**不能用 `--mode module -p module=entry` 单模块编译**——兄弟模块（feature/components 下的 HAR）不会被解析，会报大量假错误（`Cannot find module 'xxx'` 10505001 + 组件语法 10905204 + 资源 10903329 批量出现）。正确做法是不带 `--mode module` 全工程编译：
-```bash
-# 编译前先 ohpm install（工程根 + 每个含 oh-package.json5 的模块），否则 file: 依赖链接不上
-ohpm install   # 工程根
-# 多模块工程：全工程编译（不要 --mode module）
+# ✅ 多模块工程：先 ohpm install，再全工程编译（不带 --mode module）
+ohpm install
 hvigorw assembleHap --no-daemon
-```
-判别假错误的方法：如果 10505001/10905204/10903329 成批出现且都指向 `entry` 模块、引用的模块名是兄弟 HAR（book_home/common 等），就是单模块编译的假错误，改全工程编译即消失。
 
-**捕获 deprecated 告警**：
+# ❌ 错误：单模块编译会报假错误（10505001/10905204/10903329 批量出现）
+# hvigorw assembleHap --mode module -p module=entry@default
+```
+
+### 模式 3：deprecated 告警统计
+
 ```bash
-# clean 后全量编译才能看到完整告警（增量编译用缓存会跳过）
+# ✅ 正确：存日志到文件，去色，分步统计
 hvigorw clean --no-daemon
-hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
-```
-
-**统计 deprecated 数量（必须用可靠方法）**：
-```bash
-# 正确：先存日志到文件，再分步统计
+hvigorw assembleHap --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
 TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
 OH_MODULES=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
-PROJECT=$((TOTAL - OH_MODULES))
-echo "工程代码 deprecated: $PROJECT（目标 0）"
+echo "工程代码 deprecated: $((TOTAL - OH_MODULES))（目标 0）"
+
+# ❌ 错误：用 paste 混合不同日志文件——行错位拼接，造成假告警
 ```
 
-**注意事项**：
-- 告警带 ANSI 颜色码，必须先 `sed 's/\x1b\[[0-9;]*m//g'` 去色再处理
-- **不要用 paste 命令混合不同日志文件的行**——会把旧日志的 deprecated 行和新日志的 File 行错位拼接，造成假告警
-- deprecated 告警是两行格式：`File: xxx.ets:行:列` + `'API名' has been deprecated.`，统计时用 `grep -B1` 配对
-- 每次统计必须基于**当前最新一次** clean 编译的日志，不要复用旧日志文件
+---
 
-## 错误码速查
+## 验证清单
 
-| 错误码 | 类别 | 原因 | 修复 |
-|--------|------|------|------|
-| **10605080** | ArkTS 语法 | `for..in` / `any` / 类型断言等不支持 | 改用 `Object.keys().forEach()` 或 `for..of`；声明明确类型 |
-| **10605029** | ArkTS 类型 | 索引访问 `obj[key]` 不支持 | 用 `Record<string, T>` 类型声明 |
-| **10605001** | 类型错误 | 对象类型赋值不匹配 / 属性不存在 | 检查类型声明；如 `UIContext.getContext` 不存在（应用 `getContext(this)`） |
-| **10605008** | any/unknown | 用了 `any` 或 `unknown` 类型 | 声明明确类型（如 `common.UIAbilityContext`） |
-| **10605999** | undefined | `Object is possibly 'undefined'` 或 `Argument of type 'Context \| undefined'`（如 `getHostContext()` 返回值未判空，尤其作实参传递时） | 加判空 `if (ctx) { ... }` 或非空断言 `!`（组件生命周期内必然有值） |
-| **10903329** | 资源错误 | 未知的资源名称 | 检查 `$r()` 引用路径；**多模块工程若此错误批量出现 + 伴随 10505001/10905204，是单模块编译假错误**（见下方「多模块工程编译」） |
-| **10905204** | UI 组件语法 | `'XxxPage();' does not meet UI component syntax` | 通常是被 `Cannot find module` 连带触发——兄弟模块未解析导致组件类型未知。先解决模块依赖（全工程编译），非真实语法错误 |
-| **10905324** | V2 状态管理 | @Local 属性被外部初始化 | 改用 @Param 或 @Param @Once（见 behavior-changes 迁移指南） |
-| **10905213** | V2/V1 混用 | V2 组件内用了含 @Link 的 V1 系统组件 | 查 behavior-changes 迁移指南第5节映射表：**有 V2 替代的必须替换**（SegmentButton→SegmentButtonV2、TextReaderIcon→TextReaderIconV2、ProgressButton/SubHeader/ToolBar→V2）；**无 V2 替代的（ComposeTitleBar/Chip/TreeView 等，见白名单）该 struct 保留 @Component** |
-| **00308018** | 版本号格式 | `api version parameter is illegal` | 配置改纯 SemVer `"26.0.0"` |
-| **00303168** | SDK 缺失 | `SDK component missing` | DEVECO_SDK_HOME 指向 `Contents/sdk`（非 `Contents/sdk/default`） |
-| **10505001** | 模块导入 | 找不到模块或接口 | 接口可能已废弃或改名，查 harmonyos-behavior-changes |
-| **10200006** | Worker 序列化 | 数据无法序列化 | 用可序列化数据类型 |
-| **10200020** | Method 不可调用 | async 方法无法被 callGlobalCallObjectMethod 调用 | 改用同步方法或调整 Worker 通信 |
-
-## 修复循环
-
-```
-编译报错 → 看错误码 → 查上表定修复方向 → 改代码 → 重新编译 → 直到 0 ERROR
-```
-
-**注意**：错误码 10505001（模块/接口找不到）通常意味着 API 已废弃或改名，需查 `harmonyos-behavior-changes` skill 的对应版本文件确认。
-
-## 多设备/UX 验证清单
-
-升级到 26.0.0 后逐项确认：
-
-### 配置验证
+**基础验证（每次必做）：**
 - [ ] `build-profile.json5` 中 `compatibleSdkVersion` = `"26.0.0"`
 - [ ] 所有模块 `targetSdkVersion` = `"26.0.0"`
 - [ ] `hvigorw assembleHap` 无 ERROR
-- [ ] 无 deprecated API 警告残留
+- [ ] 无 deprecated API 警告残留（工程代码 0）
 
-### 版本隔离行为验证（targetSdk ≥ 26 才生效）
-- [ ] 触摸热区（Button/Toggle/Select/Chip）高度 32vp 是否影响布局
-- [ ] Dialog/Toast/AlphabetIndexer 沉浸式材质效果是否可接受
-- [ ] 内置文本孤字换行/小语种行高/音节换行效果
-- [ ] NodeAdapter onAttachToNode 回调时机是否正常
-- [ ] matchParent 布局是否符合预期
-- [ ] 阴影（radius=0）效果是否符合预期
+**压力验证（发布前做）：**
+- [ ] **版本隔离行为验证（targetSdk ≥ 26 才生效）**
+  - [ ] 触摸热区（Button/Toggle/Select/Chip）高度 32vp 是否影响布局
+  - [ ] Dialog/Toast/AlphabetIndexer 沉浸式材质效果是否可接受
+  - [ ] 内置文本孤字换行/小语种行高/音节换行效果
+  - [ ] NodeAdapter onAttachToNode 回调时机是否正常
+  - [ ] matchParent 布局是否符合预期
+  - [ ] 阴影（radius=0）效果是否符合预期
+- [ ] **无版本隔离行为验证（必须正常）**
+  - [ ] Web 组件（ArkWeb/JSVM 内核 132→144）页面显示正常
+  - [ ] async 函数相关逻辑（util.types().isAsyncFunction）无异常
+  - [ ] XML 解析（fastConvertToJSObject）结果正确
+  - [ ] 鼠标事件 rawDeltaX/rawDeltaY 数值合理
+  - [ ] 媒体库权限（READ_IMAGEVIDEO）能读到本地资源
+- [ ] **多设备**
+  - [ ] 手机布局正常
+  - [ ] 平板/折叠屏布局正常
+  - [ ] 2in1/PC 布局正常（如适用）
 
-### 无版本隔离行为验证（必须正常）
-- [ ] Web 组件（ArkWeb/JSVM 内核 132→144）页面显示正常
-- [ ] async 函数相关逻辑（util.types().isAsyncFunction）无异常
-- [ ] XML 解析（fastConvertToJSObject）结果正确
-- [ ] 鼠标事件 rawDeltaX/rawDeltaY 数值合理
-- [ ] 媒体库权限（READ_IMAGEVIDEO）能读到本地资源
+---
 
-### 多设备
-- [ ] 手机布局正常
-- [ ] 平板/折叠屏布局正常
-- [ ] 2in1/PC 布局正常（如适用）
+## 常见问题
 
-## 与其他子 skill 的衔接
+**Q：报 "hvigorw not found" 或 "SDK component missing"**
+A：hvigorw 不在系统 PATH。运行环境探测脚本定位 DevEco Studio 安装路径，配置 `DEVECO_SDK_HOME` 指向 `Contents/sdk`（不是 `Contents/sdk/default`）和 PATH。装了 DevEco Studio 就一定有 hvigorw。
 
-- 编译报错涉及 API 行为变化 → 查 `harmonyos-behavior-changes`
-- 编译报错涉及版本号格式 → 查 `harmonyos-upgrade-config`
-- 全部验证通过 → 升级完成
+**Q：多模块工程编译报大量 "Cannot find module"（10505001）+ 组件语法（10905204）+ 资源（10903329）错误**
+A：这是单模块编译的假错误。多模块工程（含 `file:` HAR 依赖）不能用 `--mode module -p module=entry` 单模块编译——兄弟模块不会被解析。正确做法是先 `ohpm install`，再不带 `--mode module` 全工程编译：`hvigorw assembleHap --no-daemon`。
+
+**Q：deprecated 告警统计数量不准**
+A：检查以下几点：是否先 `hvigorw clean` 再全量编译（增量编译用缓存会跳过告警）；是否用 `sed` 去掉了 ANSI 颜色码；是否用 `grep -B1` 配对了两行格式的告警；是否复用了旧日志文件（每次必须基于最新 clean 编译日志）；是否误用了 paste 混合不同日志文件（会行错位）。
+
+**Q：报 10605999 "Object is possibly 'undefined'"**
+A：`getHostContext()` 返回 `Context | undefined`。加判空 `if (ctx) { ... }` 或非空断言 `!`（组件生命周期内必然有值）。注意闭包内控制流分析会重置，仍认为可能 undefined，需用非空断言 `!`。
+
+**Q：报 10905213 "V2 component cannot be used with @Link"**
+A：V2 组件内用了含 @Link 的 V1 系统组件。查 behavior-changes 迁移指南映射表：有 V2 替代的（SegmentButton/TextReaderIcon/ProgressButton/SubHeader/ToolBar/Dialog 等）必须替换成 V2 版本；无 V2 替代的（ComposeTitleBar/Chip/TreeView 等，见白名单）该 struct 保留 @Component。
+
+---
+
+## 延伸阅读
+
+- `../harmonyos-behavior-changes/SKILL.md`：行为变化适配——编译报错涉及 API 行为变化时查
+- `../harmonyos-upgrade-config/SKILL.md`：配置文件升级——编译报错涉及版本号格式时查
+- `../harmonyos-deprecated-apis/SKILL.md`：废弃 API 检查与替换——deprecated 告警迁移时查
