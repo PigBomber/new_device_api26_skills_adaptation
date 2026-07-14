@@ -1,6 +1,6 @@
 ---
-name: hmos-pen-adaptation
-description: 鸿蒙手写笔（Pen Kit）适配开发。当开发者提到手写笔、画布书写、笔记、压感、报点预测、跟手性、一笔成形、图形识别、全局取色、取色器、笔身轻捏、笔身双击、stylusInteraction、sourceTool 区分笔和手指、HandwriteComponent、PointPredictor、InstantShapeGenerator 时触发。适用于手写套件集成、自定义画布压感绘制、跟手性优化、图形识别、全屏取色、笔身硬件事件等场景。不包含鼠标/键盘/触摸交互归一化（见 hmos-multidevice-interaction-methods skill）。
+name: harmonyos-stylus-adaptation
+description: 鸿蒙手写笔（Pen Kit）适配开发。当开发者提到手写笔、画布书写、笔记、压感、报点预测、跟手性、一笔成形、图形识别、全局取色、取色器、笔身轻捏、笔身双击、stylusInteraction、sourceTool 区分笔和手指、HandwriteComponent、PointPredictor、InstantShapeGenerator 时触发。适用于手写套件集成、自定义画布压感绘制、跟手性优化、图形识别、全屏取色、笔身硬件事件等场景。不包含鼠标/键盘/触摸交互归一化、纯视觉动画微调、与手写笔无关的业务流程。
 ---
 
 ## Agent Interface
@@ -45,7 +45,7 @@ diagnostic_checklist:
 
 具体覆盖：手写套件（HandwriteComponent/Controller）集成、报点预测（PointPredictor）跟手性优化、一笔成形（InstantShapeGenerator）图形识别、全局取色（imageFeaturePicker）、手写交互（stylusInteraction 笔身轻捏/双击）、自定义 Canvas 笔触事件适配。
 
-**不覆盖**：触摸/鼠标/键盘交互归一化（见 `hmos-multidevice-interaction-methods` skill）；纯视觉动画微调；与手写笔无关的业务流程。
+**不覆盖**：触摸/鼠标/键盘交互归一化、纯视觉动画微调、与手写笔无关的业务流程。
 
 > Pen Kit 仅限中国境内使用（港澳台除外），不支持模拟器，适用设备为 Phone/Tablet/2in1 且需支持手写笔硬件。
 
