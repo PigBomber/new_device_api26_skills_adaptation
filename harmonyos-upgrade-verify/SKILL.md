@@ -100,6 +100,15 @@ hvigorw assembleHap --mode module -p module=phone@default -p product=default --n
 
 **模块名注意**：`-p module=` 后面跟的是模块名，不一定是 `entry`。从工程 `build-profile.json5` 的 `modules[].name` 读取（如本工程是 `phone`）。
 
+**多模块工程必须全工程编译**：含多个 HAR 本地依赖（`entry/oh-package.json5` 里有 `"xxx": "file:../feature/xxx"`）的工程，**不能用 `--mode module -p module=entry` 单模块编译**——兄弟模块（feature/components 下的 HAR）不会被解析，会报大量假错误（`Cannot find module 'xxx'` 10505001 + 组件语法 10905204 + 资源 10903329 批量出现）。正确做法是不带 `--mode module` 全工程编译：
+```bash
+# 编译前先 ohpm install（工程根 + 每个含 oh-package.json5 的模块），否则 file: 依赖链接不上
+ohpm install   # 工程根
+# 多模块工程：全工程编译（不要 --mode module）
+hvigorw assembleHap --no-daemon
+```
+判别假错误的方法：如果 10505001/10905204/10903329 成批出现且都指向 `entry` 模块、引用的模块名是兄弟 HAR（book_home/common 等），就是单模块编译的假错误，改全工程编译即消失。
+
 **捕获 deprecated 告警**：
 ```bash
 # clean 后全量编译才能看到完整告警（增量编译用缓存会跳过）
@@ -130,8 +139,9 @@ echo "工程代码 deprecated: $PROJECT（目标 0）"
 | **10605029** | ArkTS 类型 | 索引访问 `obj[key]` 不支持 | 用 `Record<string, T>` 类型声明 |
 | **10605001** | 类型错误 | 对象类型赋值不匹配 / 属性不存在 | 检查类型声明；如 `UIContext.getContext` 不存在（应用 `getContext(this)`） |
 | **10605008** | any/unknown | 用了 `any` 或 `unknown` 类型 | 声明明确类型（如 `common.UIAbilityContext`） |
-| **10605999** | undefined | Object is possibly 'undefined'（如 `getHostContext()` 返回值未判空） | 加判空 `if (ctx) { ... }` 或非空断言 `!` |
-| **10903329** | 资源错误 | 未知的资源名称 | 检查 `$r()` 引用路径 |
+| **10605999** | undefined | `Object is possibly 'undefined'` 或 `Argument of type 'Context \| undefined'`（如 `getHostContext()` 返回值未判空，尤其作实参传递时） | 加判空 `if (ctx) { ... }` 或非空断言 `!`（组件生命周期内必然有值） |
+| **10903329** | 资源错误 | 未知的资源名称 | 检查 `$r()` 引用路径；**多模块工程若此错误批量出现 + 伴随 10505001/10905204，是单模块编译假错误**（见下方「多模块工程编译」） |
+| **10905204** | UI 组件语法 | `'XxxPage();' does not meet UI component syntax` | 通常是被 `Cannot find module` 连带触发——兄弟模块未解析导致组件类型未知。先解决模块依赖（全工程编译），非真实语法错误 |
 | **10905324** | V2 状态管理 | @Local 属性被外部初始化 | 改用 @Param 或 @Param @Once（见 behavior-changes 迁移指南） |
 | **10905213** | V2/V1 混用 | V2 组件内用了含 @Link 的 V1 系统组件 | 查 behavior-changes 迁移指南第5节映射表：**有 V2 替代的必须替换**（SegmentButton→SegmentButtonV2、TextReaderIcon→TextReaderIconV2、ProgressButton/SubHeader/ToolBar→V2）；**无 V2 替代的（ComposeTitleBar/Chip/TreeView 等，见白名单）该 struct 保留 @Component** |
 | **00308018** | 版本号格式 | `api version parameter is illegal` | 配置改纯 SemVer `"26.0.0"` |

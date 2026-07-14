@@ -113,11 +113,11 @@ ERROR 10905213: A V2 component cannot be used with any member property decorated
 
 | V1 组件 | V2 替代 | since | 说明 |
 |---------|---------|-------|------|
-| `TextReaderIcon` | `TextReaderIconV2` | 24 | 朗读听筒图标，华为官方明确：V1 工程用 TextReaderIcon，V2 工程必须用 TextReaderIconV2 |
+| `TextReaderIcon` | `TextReaderIconV2` | 24 | 朗读听筒图标，V1 工程用 TextReaderIcon，V2 工程必须用 TextReaderIconV2 |
 
 **铁律（按映射表有无分两种情况）**：
 - **映射表有 V2 替代的**（上表 SegmentButton/ProgressButton/SubHeader/ToolBar/Dialog/TextReaderIcon 等）→ **必须替换成 V2 版本，禁止把所在 struct 回退到 @Component**。V1 高级组件在 V2 数据流中会出现：
-  - 状态不同步（V1 的 `@State`/`@Link` 不被 V2 的 `@Local`/`@Param` 观测）—— 华为官方原文："使用 V1 装饰器时用 TextReaderIcon，使用 V2 装饰器时**需要**用 TextReaderIconV2"
+  - 状态不同步（V1 的 `@State`/`@Link` 不被 V2 的 `@Local`/`@Param` 观测）—— "使用 V1 装饰器时用 TextReaderIcon，使用 V2 装饰器时**需要**用 TextReaderIconV2"
   - 编译报错 10905213（V2 组件嵌套 V1 @Link 组件）
   - 选中态/进度等交互态丢失
 - **映射表没有 V2 替代的**（见下方「无 V2 替代」白名单，如 ComposeTitleBar/Chip/TreeView 等）→ 该 struct **可以保留 @Component**，父子组件 V1/V2 可混用，不影响外层 V2 化
@@ -591,5 +591,5 @@ hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&
 
 ## 参考文档
 
-- [V1向V2迁移场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-state-management-v1-v2-migration-guide) — 华为官方迁移指南
-- [V1和V2混用场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/v1v2-mixing) — 华为官方混用说明
+- [V1向V2迁移场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-state-management-v1-v2-migration-guide) — 迁移指南
+- [V1和V2混用场景](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/v1v2-mixing) — 混用说明

@@ -420,6 +420,41 @@ if (typeof value == 'string') {
 
 ---
 
+## 通用易错：getHostContext() 作参数传递必须加非空断言（错误码 10605999）
+
+`getHostContext()` 返回 `Context | undefined`。当它作为**实参**传给要求 `Context`（非可选）的函数/方法时，编译报 `Argument of type 'Context | undefined' is not assignable to parameter of type 'Context'`（错误码 10605999）。
+
+典型场景：工具类（如 ActionSheet、VM）改签名加 `context: Context` 参数后，调用方从组件传入：
+```typescript
+// 报错：getHostContext() 返回 Context | undefined，形参要求 Context
+baseActionSheet.show(option, this.getUIContext().getHostContext())  // ERROR 10605999
+
+// 正确：组件生命周期内 context 必然存在，加非空断言
+baseActionSheet.show(option, this.getUIContext().getHostContext()!)
+```
+**排查命令**：
+```bash
+grep -rn "getHostContext())" --include="*.ets" .  # 找缺 ! 的调用点
+```
+> 闭包内同样需要 `!`（见第 4 节「闭包内判空失效」）。
+
+---
+
+## 通用易错：多模块工程必须全工程编译（不能单模块）
+
+多模块工程（多个 HAR 依赖）用 `--mode module -p module=entry` 单编译 entry 会报大量假错误（`Cannot find module 'xxx'` 10505001 + 组件语法 10905204 + 资源 10903329），因为兄弟模块（feature/components 下的 HAR）未被解析。
+
+```bash
+# 错误：单模块编译，兄弟模块依赖解析不了
+hvigorw assembleHap --mode module -p module=entry@default ...
+
+# 正确：全工程编译（不带 --mode module）
+hvigorw assembleHap --no-daemon
+```
+且编译前必须先 `ohpm install`（工程根 + 每个含 oh-package.json5 的模块），否则 `oh_modules/` 为空、`file:` 本地依赖链接不上。
+
+---
+
 ## 附录：工具类 getContext 的两种迁移模式
 
 迁移工具类的 `getContext()` 有两种模式，按场景选择：
