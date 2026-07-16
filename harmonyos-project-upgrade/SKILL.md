@@ -108,28 +108,37 @@ diagnostic_checklist:
 
 确定路径并配好 hvigorw + SDK 门控后，**用 TodoWrite 创建内置 todo 清单**。**不允许跳过任何环节**。
 
-内置 todo 清单模板（复制到 TodoWrite，按路径填入目标版本/格式）：
+内置 todo 清单模板（复制到 TodoWrite，todo 文本保持简洁专业，**不带括号内的技术参数**——路径分支、阈值、grep 命令等执行细节按下文「使用说明」填充）：
 
 ```
-0. 前置门控：配 hvigorw + 检查 SDK apiVersion 满足路径要求（路径A≥23；路径B≥26；不足先提醒升级 DevEco）
-1. 检测：读 build-profile.json5 定基线版本、统计 V1 装饰器
-2. 配置升级：改 compatibleSdkVersion/targetSdkVersion
-   - 路径A：→ "6.1.0(23)"（旧格式带 API level）
-   - 路径B：→ "26.0.0"（纯 SemVer）
-3. 废弃API迁移：clean 编译捕获 deprecated → 按对照表迁移（路径A只迁 since≤23；路径B迁全部）
-4. 状态管理 V1→V2：【仅路径B】（路径A 跳过此步，标记 completed 注明"路径A不涉及"）
-   4a. 应用级状态：@StorageLink/@StorageProp/AppStorage → AppStorageV2
-   4b. 数据类：@Observed/@ObjectLink → @ObservedV2/@Trace
-   4c. 跨层级：@Provide/@Consume → @Provider/@Consumer
-   4d. 组件级：@Component→@ComponentV2 + @State→@Local/@Param + @Prop→@Param + @Link→@Param+@Event
-   4e. 监听：@Watch→@Monitor（检查同步→异步时序变化）
-5. 行为变化适配：grep 扫项目代码，命中的才改（累积查表：路径A查6.0.0+6.1.0表；路径B查6.0.0+6.1.0+26.0.0表）
-6. 编译验证：0 ERROR + 0 deprecated + 运行时无崩溃
-7. 经验沉淀：新踩的坑写回 references
+0. 配置编译环境与 SDK 校验
+1. 检测项目基线版本
+2. 配置版本号升级
+3. 废弃 API 迁移
+4. 状态管理 V1→V2 迁移
+5. 行为变化适配
+6. 编译验证
+7. 经验沉淀
 ```
 
-如何使用这个清单：
-1. **先跑步骤1检测**，拿到基线版本和 V1 装饰器统计，把实际数量填进 todo
+**使用说明（agent 内部参考，不写入 todo 文本）：**
+
+- **步骤0**：配置 hvigorw + 检查 `apiVersion`（路径A≥23；路径B≥26）；不足先提醒升级 DevEco，再继续
+- **步骤1**：读 `build-profile.json5` 定基线版本、统计 V1 装饰器数量，把实际数量填进 todo 备注
+- **步骤2**：改 `compatibleSdkVersion`/`targetSdkVersion`——路径A 用 `"6.1.0(23)"`（旧格式带 API level）；路径B 用 `"26.0.0"`（纯 SemVer）
+- **步骤3**：clean 编译捕获 deprecated → 按对照表迁移（路径A只迁 since≤23；路径B迁全部）；目标=0
+- **步骤4**：**仅路径B**（路径A 跳过，标记 completed 注明"路径A不涉及"）。迁移顺序：
+  - 4a 应用级：@StorageLink/@StorageProp/AppStorage → AppStorageV2
+  - 4b 数据类：@Observed/@ObjectLink → @ObservedV2/@Trace
+  - 4c 跨层级：@Provide/@Consume → @Provider/@Consumer
+  - 4d 组件级：@Component→@ComponentV2 + @State→@Local/@Param + @Prop→@Param + @Link→@Param+@Event
+  - 4e 监听：@Watch→@Monitor（注意同步→异步时序变化）
+- **步骤5**：grep 扫项目代码，命中的才改（累积查表：路径A查 6.0.0+6.1.0 表；路径B查 6.0.0+6.1.0+26.0.0 表）。**禁止预防性修改**
+- **步骤6**：目标 = 0 ERROR + 0 deprecated + 运行时无崩溃
+- **步骤7**：新踩的坑写回对应 reference
+
+如何执行这个清单：
+1. **先跑步骤1检测**，拿到基线版本和 V1 装饰器统计
 2. **逐步执行**，每完成一项标记 completed，开始下一项标记 in_progress
 3. **每项完成后编译验证**，有错误立即修
 4. **如果某项工程里不存在**（如没有 @StorageLink），标记 completed 并注明"工程无此项"
