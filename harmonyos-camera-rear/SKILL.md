@@ -1,5 +1,5 @@
 ---
-name: harmonyos-camera-rear-adaptation
+name: harmonyos-camera-rear
 description: 鸿蒙后置摄像头 UX 与功能适配开发。当开发者提到切换到后置摄像头后预览画面拉伸/变形/裁切、后摄下拍照按钮/录像按钮/模式切换条位置错乱或被遮挡、后摄下人脸检测框消失、后摄变焦范围与前摄不同导致滑块不对、闪光灯按钮在前摄仍可点（本该禁用）、滤镜在后摄不可用、getZoomRatioRange 前后摄返回不同、getSupportedOutputCapability 能力差异、前后摄能力不同导致 UI 没跟着变、Capability-First 能力驱动 UI、setXComponentSurfaceRect 预览比例适配、preconfig/PreconfigRatio 选比例时触发。适用于后置摄像头场景下根据相机实际能力动态调整预览比例、重新布局叠加控件、按能力启用/禁用功能（人脸/变焦/闪光灯/曝光/对焦）等场景。不包含摄像头选择与会话重建、相机旋转角度补偿、图片编辑、与相机无关的 UI。
 ---
 
