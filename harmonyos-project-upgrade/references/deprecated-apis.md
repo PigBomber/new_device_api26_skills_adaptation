@@ -1,7 +1,6 @@
----
-name: harmonyos-deprecated-apis
-description: 鸿蒙项目升级中的废弃 API 检查与替换环节。当开发者提到「升级后哪些 API 废弃了」「deprecated 警告怎么修」「API 找不到了」「接口被移除了」「deprecated API」「@deprecated 标记」「旧接口替代方案」「getContext 怎么改」「px2vp 废弃」「promptAction 废弃」「router 废弃」时触发。提供检测项目中废弃 API 使用的方法、API 26 核心废弃对照表（全局函数→UIContext）、迁移规则与易错点。与 harmonyos-behavior-changes（行为变化）互补。不包含版本检测、配置修改、编译验证。
----
+# 废弃 API 检查与替换
+
+> 本文件为 `../SKILL.md` 的补充，覆盖升级流程步骤3「废弃API迁移」环节：检测废弃 API 并找替代方案。当 SKILL.md 路由到废弃API环节时读取本文件。
 
 ## Agent Interface
 
@@ -38,15 +37,17 @@ diagnostic_checklist:
 
 ## 适配领域
 
-本 skill 覆盖升级流程的第三步：找出代码中使用的已被废弃（deprecated / removed）的 API，并找到替代方案。包含 API 26 核心废弃对照表（全局函数→UIContext）、迁移规则（4 种场景获取 UIContext）、迁移易错点（7 条）、各版本速查。
+本文件覆盖升级流程的第三步：找出代码中使用的已被废弃（deprecated / removed）的 API，并找到替代方案。包含 API 26 核心废弃对照表（全局函数→UIContext）、迁移规则（4 种场景获取 UIContext）、迁移易错点（7 条）、各版本速查。
 
-**不覆盖**：API 还在但行为变了（见 `harmonyos-behavior-changes`）；版本检测（见 `harmonyos-upgrade-detect`）；配置修改（见 `harmonyos-upgrade-config`）；编译验证（见 `harmonyos-upgrade-verify`）。
+> **废弃 API 检测自动按目标版本区分**：编译器只报"当前目标 SDK 已废弃"的告警。路径A（→6.1.0）只会报 since ≤ 23 的；路径B（→26.0.0）报全部（含 since 24~26 的）。下方对照表每项标了 `since`，用于人工核对分类。
+
+**不覆盖**：API 还在但行为变了（见 `behavior-changes.md`）；版本检测（见 `upgrade-detect.md`）；配置修改（见 `upgrade-config.md`）；编译验证（见 `upgrade-verify.md`）。
 
 ---
 
 ## 废弃 API vs 行为变化
 
-| | 废弃 API（本 skill） | 行为变化（harmonyos-behavior-changes） |
+| | 废弃 API（本文件） | 行为变化（behavior-changes.md） |
 |---|---|---|
 | API 状态 | **已废弃或移除**，编译可能报错或告警 | API **还在**，但返回值/默认效果/触发时机变了 |
 | 典型表现 | `cannot find name 'xxx'` / `@deprecated` 警告 | 运行时行为不符合预期 |
@@ -84,7 +85,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 ```
 
 > 模块名从 `build-profile.json5` 的 `modules[].name` 读取，不一定是 `entry`。
-> **hvigorw 配置**：见 `harmonyos-upgrade-verify` 的编译环境配置章节。
+> **hvigorw 配置**：见 `upgrade-verify.md` 的编译环境配置章节。
 
 > **绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——装了 DevEco Studio 就一定有 hvigorw，配好环境变量即可（用户已踩过此坑）。
 
@@ -355,7 +356,7 @@ Kit 从一个模块迁移到另一个，旧 import 路径废弃。例如：
 Stage 模型全面替代 FA 模型。FA 模型特有的 API（PageAbility 相关）在 API 10+ 已标记废弃。
 
 ### 3. 状态管理 V1 装饰器（必须迁移）
-V1 装饰器（@State/@Prop/@Link 等）在 26.0.0 虽然还能编译运行，但**升级时必须迁移到 V2**。详见 `harmonyos-behavior-changes` 的状态管理迁移指南。
+V1 装饰器（@State/@Prop/@Link 等）在 26.0.0 虽然还能编译运行，但**升级时必须迁移到 V2**。详见 `behavior-changes.md` 的状态管理迁移指南。
 
 ### 4. 接口签名变更
 部分接口的参数列表或返回类型变更，旧签名废弃。编译时通常报类型不匹配错误。
@@ -406,6 +407,6 @@ A：`AlertDialog.show(options)` 是废弃的全局函数，要改成 `this.getUI
 ## 延伸阅读
 
 - `references/migration-archive.md`：废弃 API 迁移档案——每个 API 的替代签名、代码示例、踩坑记录（23 条 + 通用易错 + 附录 3 种工具类迁移模式）——当需要查阅具体 API 的迁移代码时读取。
-- `../harmonyos-behavior-changes/SKILL.md`：行为变化适配——API 还在但行为变了时查
-- `../harmonyos-upgrade-verify/SKILL.md`：编译验证与错误码——编译报错修复时查
-- `../harmonyos-project-upgrade/SKILL.md`：升级总入口——废弃 API 检查在升级流程中的位置
+- `behavior-changes.md`：行为变化适配——API 还在但行为变了时查
+- `upgrade-verify.md`：编译验证与错误码——编译报错修复时查
+- `../SKILL.md`：升级总入口——废弃 API 检查在升级流程中的位置
