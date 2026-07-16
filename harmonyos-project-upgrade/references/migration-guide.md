@@ -216,7 +216,8 @@ this.infos[0].value += '1';
 
 建议每个状态变量关联的组件数少于 20 个。如果一个状态变量绑定在多个同级子组件上，修改时所有关联组件都会刷新。**解决**：将相同的属性绑定提到公共父组件上，减少关联的组件数。
 
-### SegmentButton → SegmentButtonV2 迁移
+
+## SegmentButton → SegmentButtonV2 迁移
 
 V1 `SegmentButton` 是 `@Component`，内部用 `@Link` 双向绑定 `selectedIndexes`，是 V2 化最常见的阻塞点。V2 系列**从 API 18 起提供**，三种样式：
 
@@ -564,7 +565,7 @@ struct Descendant {
 ### 第 5 步：编译验证 + 重点复查
 
 ```bash
-hvigorw assembleHap --mode module -p module=entry@default -p product=default 2>&1 | grep -E "ERROR|error"
+hvigorw assembleHap --no-daemon 2>&1 | grep -E "ERROR|error"
 ```
 
 **重点复查清单：**

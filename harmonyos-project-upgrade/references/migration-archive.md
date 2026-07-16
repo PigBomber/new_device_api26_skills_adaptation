@@ -393,6 +393,103 @@ const str = resourceManager.getStringValue(resource.id)
 
 ---
 
+## 19. lpx2px / fp2px（since 18 废弃）
+
+**废弃**：全局 `lpx2px(value)` / `fp2px(value)`
+**替代**：`UIContext.lpx2px(value)` / `UIContext.fp2px(value)`
+
+和 px2vp/vp2px 同属「全局函数 → UIContext 实例方法」大类，迁移方式完全一致。
+
+---
+
+## 20. getPluralStringValue 系列（since 18 整个方法废弃）
+
+**废弃**：`getPluralStringValueSync` / `getPluralStringValue` / `getPluralStringByNameSync` / `getPluralStringByName`（**整个方法废弃，不只是 Resource 重载**）
+**替代**：`getIntPluralStringValueSync` / `getIntPluralStringByNameSync`
+
+```typescript
+// 改前（number 和 Resource 重载都废弃了）
+resourceManager.getPluralStringValueSync(resId, num)
+resourceManager.getPluralStringValueSync(resource, num)
+resourceManager.getPluralStringValue(resId, num)
+resourceManager.getPluralStringByNameSync(resName, num)
+
+// 改后
+resourceManager.getIntPluralStringValueSync(resId, num)
+resourceManager.getIntPluralStringValueSync(resource.id, num)  // Resource 用 .id
+resourceManager.getIntPluralStringValueSync(resId, num)  // 异步版也改 Sync 版
+resourceManager.getIntPluralStringByNameSync(resName, num)
+```
+
+**注意**：`getPluralStringValue`（异步 Promise）废弃后没有对应的 `getIntPluralStringValue` 异步版，替代的 `getIntPluralStringValueSync` 是同步的。如果需要保持异步签名，直接 return Sync 版即可（`return resourceManager.getIntPluralStringValueSync(resId, num)`）。
+
+---
+
+## 21. PhotoViewPicker 系列（since 20 类迁移）
+
+**废弃**：`picker.PhotoViewPicker` / `picker.PhotoSelectOptions` / `picker.PhotoSelectResult` / `PhotoViewMIMETypes.IMAGE_TYPE`（整个类从 `@ohos.file.picker` 迁移）
+**替代**：`photoAccessHelper.PhotoViewPicker` / `photoAccessHelper.PhotoSelectOptions`（来自 `@kit.MediaLibraryKit`）
+
+```typescript
+// 改前
+import picker from '@ohos.file.picker'
+const opt = new picker.PhotoSelectOptions()
+opt.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE
+opt.selectionMode = picker.PhotoSelectMode.SINGLE
+const pv = new picker.PhotoViewPicker(getContext())
+const result = await pv.select(opt)
+
+// 改后
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
+const opt = new photoAccessHelper.PhotoSelectOptions()
+opt.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+opt.selectionMode = photoAccessHelper.PhotoSelectMode.SINGLE
+const pv = new photoAccessHelper.PhotoViewPicker()  // 不再需要 context 参数
+const result = await pv.select(opt)
+```
+
+**注意**：`picker.PhotoViewPicker.save` 和 `picker.PhotoSaveOptions` 废弃后，`photoAccessHelper` 没有直接对等的 save 方法。替代方案是用 `photoAccessHelper.PhotoAccessHelper.createAsset()` 创建媒体资源。
+
+---
+
+## 22. selectionMenuOptions → editMenuOptions（since 20 废弃）
+
+**废弃**：Web 组件的 `.selectionMenuOptions()` 属性
+**替代**：`.editMenuOptions()`
+
+```typescript
+// 改前
+Web({ controller: this.controller })
+  .selectionMenuOptions(this.options.selectionMenuOptions)
+
+// 改后
+Web({ controller: this.controller })
+  .editMenuOptions(this.options.editMenuOptions)
+```
+
+**注意**：参数类型从 `Array<ExpandedMenuItemOptions>` 变为 `EditMenuOptions`（结构不同，是 API 签名变更不是简单改名）。
+
+---
+
+## 23. decodeWithStream → decodeToString（since 12 废弃）
+
+**废弃**：`TextDecoder.decodeWithStream(input, options)` / `TextDecoder.decode(input, options)`
+**替代**：`TextDecoder.decodeToString(input, options)`
+
+```typescript
+// 改前
+const decoder = new util.TextDecoder('utf-8')
+const str = decoder.decodeWithStream(uint8Array, { stream: true })
+
+// 改后
+const decoder = new util.TextDecoder('utf-8')
+const str = decoder.decodeToString(uint8Array, { stream: true })
+```
+
+参数签名相同，直接改名即可。
+
+---
+
 ## 通用易错：迁移时不要破坏原有控制流兜底
 
 迁移废弃 API 时，如果改动涉及 `if/else` 分支，**不要把无条件的 `else` 改成带条件的 `else if`**——会破坏兜底赋值，导致变量在某个分支未赋值，编译报 `Variable 'xxx' is used before being assigned`（错误码 10605999）。
@@ -513,100 +610,3 @@ AppUtil.getContext().resourceManager.getStringSync(...)
 AppUtil.getUIContext().px2vp(...)
 ```
 **适用**：多模块工程，各模块的工具类都需要 context/UIContext 的场景。比模式 A（逐个传参）简洁，比模式 B（每个工具类各自持有）更统一。
-
----
-
-## 19. lpx2px / fp2px（since 18 废弃）
-
-**废弃**：全局 `lpx2px(value)` / `fp2px(value)`
-**替代**：`UIContext.lpx2px(value)` / `UIContext.fp2px(value)`
-
-和 px2vp/vp2px 同属「全局函数 → UIContext 实例方法」大类，迁移方式完全一致。
-
----
-
-## 20. getPluralStringValue 系列（since 18 整个方法废弃）
-
-**废弃**：`getPluralStringValueSync` / `getPluralStringValue` / `getPluralStringByNameSync` / `getPluralStringByName`（**整个方法废弃，不只是 Resource 重载**）
-**替代**：`getIntPluralStringValueSync` / `getIntPluralStringByNameSync`
-
-```typescript
-// 改前（number 和 Resource 重载都废弃了）
-resourceManager.getPluralStringValueSync(resId, num)
-resourceManager.getPluralStringValueSync(resource, num)
-resourceManager.getPluralStringValue(resId, num)
-resourceManager.getPluralStringByNameSync(resName, num)
-
-// 改后
-resourceManager.getIntPluralStringValueSync(resId, num)
-resourceManager.getIntPluralStringValueSync(resource.id, num)  // Resource 用 .id
-resourceManager.getIntPluralStringValueSync(resId, num)  // 异步版也改 Sync 版
-resourceManager.getIntPluralStringByNameSync(resName, num)
-```
-
-**注意**：`getPluralStringValue`（异步 Promise）废弃后没有对应的 `getIntPluralStringValue` 异步版，替代的 `getIntPluralStringValueSync` 是同步的。如果需要保持异步签名，直接 return Sync 版即可（`return resourceManager.getIntPluralStringValueSync(resId, num)`）。
-
----
-
-## 21. PhotoViewPicker 系列（since 20 类迁移）
-
-**废弃**：`picker.PhotoViewPicker` / `picker.PhotoSelectOptions` / `picker.PhotoSelectResult` / `PhotoViewMIMETypes.IMAGE_TYPE`（整个类从 `@ohos.file.picker` 迁移）
-**替代**：`photoAccessHelper.PhotoViewPicker` / `photoAccessHelper.PhotoSelectOptions`（来自 `@kit.MediaLibraryKit`）
-
-```typescript
-// 改前
-import picker from '@ohos.file.picker'
-const opt = new picker.PhotoSelectOptions()
-opt.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE
-opt.selectionMode = picker.PhotoSelectMode.SINGLE
-const pv = new picker.PhotoViewPicker(getContext())
-const result = await pv.select(opt)
-
-// 改后
-import { photoAccessHelper } from '@kit.MediaLibraryKit'
-const opt = new photoAccessHelper.PhotoSelectOptions()
-opt.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
-opt.selectionMode = photoAccessHelper.PhotoSelectMode.SINGLE
-const pv = new photoAccessHelper.PhotoViewPicker()  // 不再需要 context 参数
-const result = await pv.select(opt)
-```
-
-**注意**：`picker.PhotoViewPicker.save` 和 `picker.PhotoSaveOptions` 废弃后，`photoAccessHelper` 没有直接对等的 save 方法。替代方案是用 `photoAccessHelper.PhotoAccessHelper.createAsset()` 创建媒体资源。
-
----
-
-## 22. selectionMenuOptions → editMenuOptions（since 20 废弃）
-
-**废弃**：Web 组件的 `.selectionMenuOptions()` 属性
-**替代**：`.editMenuOptions()`
-
-```typescript
-// 改前
-Web({ controller: this.controller })
-  .selectionMenuOptions(this.options.selectionMenuOptions)
-
-// 改后
-Web({ controller: this.controller })
-  .editMenuOptions(this.options.editMenuOptions)
-```
-
-**注意**：参数类型从 `Array<ExpandedMenuItemOptions>` 变为 `EditMenuOptions`（结构不同，是 API 签名变更不是简单改名）。
-
----
-
-## 23. decodeWithStream → decodeToString（since 12 废弃）
-
-**废弃**：`TextDecoder.decodeWithStream(input, options)` / `TextDecoder.decode(input, options)`
-**替代**：`TextDecoder.decodeToString(input, options)`
-
-```typescript
-// 改前
-const decoder = new util.TextDecoder('utf-8')
-const str = decoder.decodeWithStream(uint8Array, { stream: true })
-
-// 改后
-const decoder = new util.TextDecoder('utf-8')
-const str = decoder.decodeToString(uint8Array, { stream: true })
-```
-
-参数签名相同，直接改名即可。

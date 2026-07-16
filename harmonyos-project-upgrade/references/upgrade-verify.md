@@ -140,28 +140,21 @@ echo "本地 SDK apiVersion: $SDK_VER（目标路径需要 ≥ $NEED_API）"
 ```bash
 cd <工程根目录>
 hvigorw clean                          # 清缓存（增量编译可能不报 deprecated，要 clean 才全量）
-hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | tail -40
 ```
 
-**模块名注意**：`-p module=` 后面跟的是模块名，不一定是 `entry`。从工程 `build-profile.json5` 的 `modules[].name` 读取。
-
-**多模块工程必须全工程编译**：含多个 HAR 本地依赖（`entry/oh-package.json5` 里有 `"xxx": "file:../feature/xxx"`）的工程，**不能用 `--mode module -p module=entry` 单模块编译**——兄弟模块不会被解析，会报大量假错误。正确做法：
-
-```bash
-# 编译前先 ohpm install（工程根 + 每个含 oh-package.json5 的模块），否则 file: 依赖链接不上
-ohpm install   # 工程根
-# 多模块工程：全工程编译（不要 --mode module）
-hvigorw assembleHap --no-daemon
+hvigorw assembleHap --no-daemon 2>&1 | tail -40
 ```
 
-判别假错误的方法：如果 10505001/10905204/10903329 成批出现且都指向 `entry` 模块、引用的模块名是兄弟 HAR（book_home/common 等），就是单模块编译的假错误，改全工程编译即消失。
+**多模块工程（含 `file:` HAR 依赖）必须全工程编译**（上例默认命令）：兄弟模块不会被解析会报大量假错误（10505001/10905204/10903329）。**单模块工程**可加 `--mode module -p module=<模块名>@default -p product=default`（模块名从 `build-profile.json5` 的 `modules[].name` 读取，不一定是 `entry`）。
+
+编译前先 `ohpm install`（工程根 + 每个含 oh-package.json5 的模块），否则 `file:` 本地依赖链接不上。判别假错误的方法：如果 10505001/10905204/10903329 成批出现且都指向 `entry` 模块、引用的模块名是兄弟 HAR（book_home/common 等），就是单模块编译的假错误，改全工程编译即消失。
 
 **第 3 步：统计 deprecated 告警**
 
 ```bash
 # clean 后全量编译才能看到完整告警（增量编译用缓存会跳过）
 hvigorw clean --no-daemon
-hvigorw assembleHap --mode module -p module=phone@default -p product=default --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
+hvigorw assembleHap --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
 
 # 正确：先存日志到文件，再分步统计
 TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)

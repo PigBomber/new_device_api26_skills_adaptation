@@ -150,8 +150,8 @@ diagnostic_checklist:
 # 读版本
 grep -E "compatibleSdkVersion|targetSdkVersion" build-profile.json5
 # 统计 V1 装饰器（决定步骤4的工作量）——排除 widget/卡片目录（WidgetCard 不迁 V2）
-grep -rc "@Component\b\|@State\b\|@Prop\b\|@Link\b\|@Watch\b\|@Provide\b\|@Consume\b\|@StorageLink\b\|@StorageProp\b\|@Observed\b\|@ObjectLink\b" \
-  --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules .
+grep -rn "@Component\b\|@State\b\|@Prop\b\|@Link\b\|@Watch\b\|@Provide\b\|@Consume\b\|@StorageLink\b\|@StorageProp\b\|@Observed\b\|@ObjectLink\b" \
+  --include="*.ets" --exclude-dir=widget --exclude-dir=widgetcard --exclude-dir=oh_modules --exclude-dir=node_modules . | grep -v "@ComponentV2" | wc -l
 ```
 
 **第 2 步：配置升级**

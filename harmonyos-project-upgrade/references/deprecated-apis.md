@@ -77,7 +77,9 @@ diagnostic_checklist:
 cd <工程根目录>
 # clean 后全量编译才能看到完整告警（增量用缓存会跳过）
 hvigorw clean --no-daemon
-hvigorw assembleHap --mode module -p module=<模块名>@default -p product=default --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
+# 多模块工程（含 file: HAR 依赖）必须全工程编译（不带 --mode module），否则兄弟模块不解析会报假错误
+# 单模块工程可用 --mode module -p module=<模块名>@default -p product=default
+hvigorw assembleHap --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
 # 统计（减去第三方库）
 TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
 OH=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
@@ -85,7 +87,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 ```
 
 > 模块名从 `build-profile.json5` 的 `modules[].name` 读取，不一定是 `entry`。
-> **hvigorw 配置**：见 `upgrade-verify.md` 的编译环境配置章节。
+> **hvigorw 配置 + 多模块编译注意**：见 `upgrade-verify.md` 的编译环境配置章节。
 
 > **绝对禁止输出"本地没有构建工具，请在 DevEco Studio 中打开"然后中止**——装了 DevEco Studio 就一定有 hvigorw，配好环境变量即可（用户已踩过此坑）。
 
@@ -190,7 +192,14 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 | 5.0.0 | 部分 `@ohos.*` 旧路径 API | 迁移到 Kit 路径（`kit.*`） |
 | 5.0.3 | `kit.StoreKit` | `kit.AppGalleryKit` |
 | 6.0.0 | 部分 ArkUI 旧属性写法 | 新属性 API |
-| 26.0.0 | FA 模型 ArkUI 接口 | 迁移到 Stage 模型 |
+| API 9 | `getStringValue`、`display.getDefaultDisplay`、`i18n.language`、`getTagInfo` | 见对照表（按 .id / Sync 后缀 / 全局命名空间） |
+| API 12 | `TextDecoder.decodeWithStream` | `decodeToString` |
+| API 13 | `imagePacker.packing` | `imagePacker.packToData` |
+| API 18 | **全局函数 → UIContext 实例方法**（px2vp/vp2px/lpx2px/fp2px/animateTo/getContext/promptAction 全系列/router 全系列/matchMediaSync/measureTextSize）—— **最大类** | `this.getUIContext().xxx()`，见对照表与迁移规则 |
+| API 18 | `getPluralStringValue` 系列整个方法 | `getIntPluralStringValueSync` / `getIntPluralStringByNameSync` |
+| API 20 | Resource 重载废弃（`getMediaContent`/`getStringSync`/`getMediaContentSync`）、`@ohos.promptAction` 模块路径、`intl.DateTimeFormat`、音量 API、`PhotoViewPicker` 类迁移 | 用 .id 重载、`@kit.ArkUI`、全局 `Intl`、`getVolumeByStream`、`@kit.MediaLibraryKit` |
+| API 20 | Web `.selectionMenuOptions` → `.editMenuOptions`（参数类型也变） | `.editMenuOptions` |
+| API 26 | `AlertDialog.show`、FA 模型 ArkUI 接口 | `UIContext.showAlertDialog`、迁移到 Stage 模型 |
 
 > **注意**：`@ohos.xxx` 旧 import 路径（如 `@ohos.file.fs`、`@ohos.hilog`）在 API 26 **仍可用，不报 deprecated 告警**，不属于必须修改范围。只有编译告警标记 `@deprecated` 的才必须改。
 
