@@ -531,7 +531,7 @@ baseActionSheet.show(option, this.getUIContext().getHostContext()!)
 ```
 **排查命令**：
 ```bash
-grep -rn "getHostContext())" --include="*.ets" .  # 找缺 ! 的调用点
+grep -rn "getHostContext())" --include="*.ets" --exclude-dir=oh_modules --exclude-dir=node_modules .  # 找缺 ! 的调用点
 ```
 > 闭包内同样需要 `!`（见第 4 节「闭包内判空失效」）。
 

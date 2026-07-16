@@ -19,6 +19,7 @@ hard_constraints:
   - WidgetCard (form modules, widget/ or widgetcard/ directories) must be excluded from V1→V2 migration — @ComponentV2 compatibility is poor for cards
   - API level < 12 projects should upgrade to 5.0.0(API12) first before continuing — large jumps are risky
   - All modules' targetSdkVersion must be unified to the same value before proceeding to config step
+  - Third-party libraries (oh_modules/, node_modules/) are out of scope — V1 decorator counts exclude these dirs; detection only scans the project's own source code
 
 diagnostic_checklist:
   - What is the current compatibleSdkVersion in build-profile.json5?

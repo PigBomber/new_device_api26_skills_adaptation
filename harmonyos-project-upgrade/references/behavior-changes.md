@@ -26,6 +26,7 @@ hard_constraints:
   - @Watch (V1, synchronous) vs @Monitor (V2, asynchronous) — @Watch executes N times for N changes, @Monitor executes once after the event; code depending on synchronous execution must be adjusted
   - V2 components using V1 @Link system components (SegmentButton, TextReaderIcon, etc.) will error 10905213 — must replace with V2 versions; components without V2 alternatives (ComposeTitleBar, Chip, TreeView, etc.) keep @Component
   - Block B behavior changes: only adapt items where grep hits project code — never do preventive modification without grep hits; two-step gating: grep hit → read context to confirm it matches the change description → only then modify
+  - Third-party libraries (oh_modules/, node_modules/) are out of scope — V1→V2 migration and behavior-change scans never touch their code; all grep scans exclude these dirs; their V1 decorators and deprecated warnings are ignored
 
 diagnostic_checklist:
   - Is this a V1→V2 migration question (Block A) or a behavior change question (Block B)?

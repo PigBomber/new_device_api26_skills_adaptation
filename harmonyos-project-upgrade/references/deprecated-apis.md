@@ -17,6 +17,7 @@ symptom_keywords:
 
 hard_constraints:
   - Every single deprecated warning from the compiler must be fixed — no exceptions, no skipping with "tool class is hard to change" or "false positive"
+  - Third-party libraries (oh_modules/, node_modules/) are strictly out of scope — their deprecated warnings are ignored and never modified; warning stats always subtract oh_modules to isolate project code; only the project's own source code is migrated
   - Compiler warnings are the ONLY reliable detection method — never use grep to find deprecated APIs (it produces false positives and false negatives)
   - Utility class getContext() must also be migrated — add context parameter to function signature, caller passes UIContext; never keep getContext() accepting the warning
   - getHostContext() returns Context | undefined — always null-check or use non-null assertion; in closures, control flow analysis resets, so use ! even after null check
@@ -71,7 +72,7 @@ diagnostic_checklist:
 - 工具类的 `getContext()` 也要改：改函数签名加 context 参数，由调用者传入 UIContext
 - 如果某条确实不确定替代方案，用 `// TODO: deprecated XXX` 标注并说明原因，但**必须给出改的方向**
 
-升级到 API 26 的项目，`hvigorw clean` 后全量编译的 deprecated 告警数必须降到 **0**（或只剩第三方库 oh_modules 的告警）。
+升级到 API 26 的项目，`hvigorw clean` 后全量编译的 deprecated 告警数必须降到 **0**（**三方库 `oh_modules/` 的告警一律忽略，不计入、不修改**）。
 
 ```bash
 cd <工程根目录>
@@ -80,10 +81,10 @@ hvigorw clean --no-daemon
 # 多模块工程（含 file: HAR 依赖）必须全工程编译（不带 --mode module），否则兄弟模块不解析会报假错误
 # 单模块工程可用 --mode module -p module=<模块名>@default -p product=default
 hvigorw assembleHap --no-daemon 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > /tmp/build.txt
-# 统计（减去第三方库）
+# 统计：只算工程自有代码，剔除三方库（oh_modules）告警
 TOTAL=$(grep -c "has been deprecated" /tmp/build.txt)
 OH=$(grep -B1 "has been deprecated" /tmp/build.txt | grep -c "oh_modules")
-echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
+echo "工程代码 deprecated: $((TOTAL-OH))（目标 0；三方库告警忽略）"
 ```
 
 > 模块名从 `build-profile.json5` 的 `modules[].name` 读取，不一定是 `entry`。
@@ -112,7 +113,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 | 现象 | 可能原因 | 修复 |
 |------|---------|------|
 | 编译报 `cannot find name 'xxx'` | API 已移除或改名 | 查对照表找替代 |
-| deprecated 告警不为 0 | 工具类 getContext 未改 / Resource 重载未改 / 第三方库告警 | 工具类也必须改；Resource 重载用 .id；第三方库(oh_modules)告警可忽略 |
+| deprecated 告警不为 0 | 工具类 getContext 未改 / Resource 重载未改 / 误把三方库告警算进工程数 | 工具类也必须改；Resource 重载用 .id；三方库(oh_modules)告警一律忽略、不计入统计 |
 | 运行时崩溃 `getRouter of undefined` | 字段初始化阶段调用了 getUIContext() | 移到 aboutToAppear（见易错点 #6） |
 | 闭包内报 `context is possibly undefined` | 闭包内控制流分析重置 | 用非空断言 `!`（见易错点 #3） |
 | ContextManager 注入后仍空指针 | setUIContext 在 loadContent 之前调用 | 移到 loadContent 回调内（见易错点 #7） |
@@ -332,8 +333,8 @@ struct MyPage {
 
 **排查方法**：
 ```bash
-grep -rn "getUIContext()!\." --include="*.ets" . | grep -v "this\.getUIContext\|aboutToAppear\|build()"
-grep -rn "ContextManager.getUIContext()!\." --include="*.ets" .
+grep -rn "getUIContext()!\." --include="*.ets" --exclude-dir=oh_modules --exclude-dir=node_modules . | grep -v "this\.getUIContext\|aboutToAppear\|build()"
+grep -rn "ContextManager.getUIContext()!\." --include="*.ets" --exclude-dir=oh_modules --exclude-dir=node_modules .
 ```
 
 **7. ContextManager 必须在 loadContent 回调里注入 UIContext**

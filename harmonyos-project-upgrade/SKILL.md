@@ -25,6 +25,7 @@ hard_constraints:
   - Never skip any step in the todo checklist — even if "looks like it won't affect compilation" (e.g. @Component→@ComponentV2 must still be done)
   - WidgetCard (form modules, widget/ directories) must be excluded from V1→V2 migration — @ComponentV2 compatibility is poor for cards
   - Pure V1 projects (0 @ComponentV2) must do full migration with no V1 residual — do not use dual-write bridge intermediate states
+  - Third-party libraries (oh_modules/, node_modules/) are strictly out of scope — never modify, fix, or migrate their code (deprecated warnings, errors, V1 decorators all ignored); all detection/scan/migration only targets the project's own source code; deprecated warning stats always subtract oh_modules to isolate project code
 
 diagnostic_checklist:
   - What is the current baseline version (compatibleSdkVersion in build-profile.json5)?
@@ -42,7 +43,7 @@ diagnostic_checklist:
 
 本 skill 是升级流程的路由入口，覆盖从版本检测到编译验证的完整升级链路。识别用户当前在升级流程的哪个环节后，读取对应 reference 处理。不存业务数据——对照表、迁移档案、错误码表都在 references 里。
 
-**不覆盖**：非升级场景（如新项目开发）；单个环节的具体技术实现（在对应 reference 中）。
+**不覆盖**：非升级场景（如新项目开发）；单个环节的具体技术实现（在对应 reference 中）；**三方库（`oh_modules/`、`node_modules/`）的任何内容**——三方库的废弃告警、编译错误、V1 装饰器一律忽略，本 skill 的检测/扫描/迁移只针对工程自有源码。
 
 ---
 
@@ -231,7 +232,7 @@ echo "工程代码 deprecated: $((TOTAL-OH))（目标 0）"
 | 现象 | 可能原因 | 修复方向 |
 |------|---------|---------|
 | 升级后编译报错 | 废弃 API 未迁移 / 版本号格式错 / V2 迁移问题 | 查错误码（`references/upgrade-verify.md`）→ 对应环节的 reference |
-| deprecated 告警不为 0 | 工具类 getContext 未改 / Resource 重载未改 / 第三方库告警 | 查 `references/deprecated-apis.md` 对照表，工具类也必须改 |
+| deprecated 告警不为 0 | 工具类 getContext 未改 / Resource 重载未改 / 误把三方库告警算进工程数 | 查 `references/deprecated-apis.md` 对照表，工具类也必须改；三方库(oh_modules)告警一律忽略 |
 | 运行时崩溃 | 字段初始化阶段调用了 getUIContext() | 移到 aboutToAppear（见 `references/deprecated-apis.md` 迁移易错点） |
 | V2 迁移后 UI 不刷新 | @Trace 漏加 / @Watch→@Monitor 时序变化 / ForEach key 不变断链 | 查 `references/behavior-changes.md` + `references/migration-guide.md` |
 | 升级遗漏环节 | 未创建 todo 清单就开始改代码 | 创建 todo 清单后逐项执行 |

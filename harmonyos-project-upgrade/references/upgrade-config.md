@@ -18,7 +18,7 @@ hard_constraints:
   - Both compatibleSdkVersion and targetSdkVersion must be changed to the target version — not just one
   - targetSdkVersion controls version isolation behavior — behaviors marked "targetSdk≥X" only take effect after targetSdkVersion reaches that version
   - All modules' targetSdkVersion must be unified to the same value — inconsistent versions cause "API version mismatch"
-  - Do not proactively upgrade ohpm dependencies — keep original versions, only upgrade if compile reports incompatibility
+  - Do not proactively upgrade or modify ohpm dependencies (third-party libraries) — keep original versions; third-party libs are out of scope, only upgrade a specific dependency if compile reports incompatibility and the user agrees
 
 diagnostic_checklist:
   - Which path is this? Path A → "6.1.0(23)" old format; path B → "26.0.0" pure SemVer

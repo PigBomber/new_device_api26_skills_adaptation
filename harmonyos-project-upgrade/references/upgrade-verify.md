@@ -24,6 +24,7 @@ hard_constraints:
   - Multi-module projects (with file: HAR dependencies) must use full-project compile (no --mode module) — single-module compile produces batch false errors (10505001/10905204/10903329)
   - deprecated warning statistics must be based on the latest clean compile log — never reuse old log files; never use paste to mix lines from different log files
   - ANSI color codes must be stripped with sed before processing build logs
+  - Third-party libraries (oh_modules/, node_modules/) are out of scope — their deprecated warnings and errors are ignored, never modified; warning stats always subtract oh_modules so the "0 deprecated" target applies to project code only
 
 diagnostic_checklist:
   - Is hvigorw in PATH or has DevEco Studio been located via the detection script?
