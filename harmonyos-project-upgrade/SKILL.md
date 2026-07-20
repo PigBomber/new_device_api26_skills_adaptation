@@ -1,6 +1,6 @@
 ---
 name: harmonyos-project-upgrade
-description: 鸿蒙项目升级总入口。当开发者提到「帮我把这个项目升级到最新版本」「升级到 API 26」「项目从 5.0.5 升到 26.0.0」「升级到 6.1」「升到 6.1.0」「鸿蒙工程升级」「compatibleSdkVersion 升级」「targetSdkVersion 升级影响」「升级后编译报错」「升级要改哪些东西」等任何涉及把现有鸿蒙项目升到更高版本的场景时触发。支持两条固定路径：升到 6.1.0(API23) 或升到 26.0.0(API26)，按用户指定的目标版本走对应路径。本 skill 是路由入口，不存业务数据，识别用户当前在升级流程的哪个环节后读取对应 reference 处理。触发后第一件事是用 TodoWrite 创建内置 todo 清单。不包含具体的技术实现细节（在 references 中）。
+description: 鸿蒙工程/项目整体版本升级总入口。当开发者要把**整个鸿蒙工程**升到更高的 SDK 版本时触发，例如「帮我把这个项目升级到 26.0.0」「项目从 5.0.5 升到 26.0.0」「升级到 API 26」「升到 6.1」「升到 6.1.0」「鸿蒙工程升级」「compatibleSdkVersion 升级」「targetSdkVersion 升级影响」「升级到新版 SDK 后编译报错」「整体升版本要改哪些东西」——核心特征是**改 build-profile.json5 的 compatibleSdkVersion/targetSdkVersion**。支持两条固定路径：升到 6.1.0(API23) 或升到 26.0.0(API26)，按用户指定的目标版本走对应路径。本 skill 是路由入口，不存业务数据，识别用户当前在升级流程的哪个环节后读取对应 reference 处理。触发后第一件事是用 TodoWrite 创建内置 todo 清单。不包含具体的技术实现细节（在 references 中）。**不触发**：单个组件/库的替换或升级（如「升级成 hds 组件」「换成 xxx 组件」「升级某个依赖」「引入新组件库」）——这些只动单个依赖不改工程 SDK 版本号，不在本 skill 范围。
 ---
 
 ## Agent Interface
